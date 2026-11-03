@@ -39,8 +39,7 @@ function connect() {
     else if (msg.type === 'chat_history') renderMessages(msg.messages);
     else if (msg.type === 'chat') addMessage(msg.message);
     else if (msg.type === 'ai') setAi(msg);
-    else if (msg.type === 'fields') fields = Array.isArray(msg.fields) ? msg.fields : [];
-    else if (msg.type === 'ime') onIme(!!msg.shown);
+
   };
   socket.onclose = () => {
     if (ws !== socket) return;
@@ -123,25 +122,11 @@ keyboard.addEventListener('keydown', event => {
   if (KEYS[event.key] === undefined) return;
   event.preventDefault(); flushText(); sendJson({ type: 'key', keyCode: KEYS[event.key] });
 });
-keyboard.addEventListener('focus', () => { resetKeyboard(); $('typeHint').hidden = true; });
+keyboard.addEventListener('focus', resetKeyboard);
 keyboard.addEventListener('blur', flushText);
-function openKeyboard() { keyboard.focus({ preventScroll: true }); resetKeyboard(); }
-// Mouse users type right after clicking the screen. On a touch screen the keyboard rises when a tap lands on an
-// Android text field (positions come from the server); if Android wants a keyboard anyway, a hint offers one tap.
-let fields = [], touchTap = null;
-canvas.addEventListener('pointerdown', event => { touchTap = event.pointerType === 'mouse' ? null : point(event); });
-canvas.addEventListener('pointerup', event => {
-  if (event.pointerType === 'mouse') return openKeyboard();
-  const p = point(event), start = touchTap; touchTap = null;
-  if (!p || !start || Math.hypot(p.x - start.x, p.y - start.y) > 24) return;
-  if (fields.some(([x1, y1, x2, y2]) => p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2)) openKeyboard();
-  else if (document.activeElement === keyboard) keyboard.blur();
-});
-$('typeHint').onclick = openKeyboard;
-function onIme(shown) {
-  if (!shown && document.activeElement === keyboard && matchMedia('(pointer: coarse)').matches) keyboard.blur();
-  $('typeHint').hidden = !shown || document.activeElement === keyboard || !matchMedia('(pointer: coarse)').matches;
-}
+// With a mouse, typing on this computer goes to the phone right after clicking its screen.
+// On touch screens Android's own keyboard appears on the phone screen.
+canvas.addEventListener('pointerup', event => { if (event.pointerType === 'mouse') { keyboard.focus({ preventScroll: true }); resetKeyboard(); } });
 
 // ---------- iPhone: fit the app to the visible area (keyboard open or not) ----------
 function fitViewport() {

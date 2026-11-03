@@ -102,15 +102,20 @@ class Device {
     if (this.monkeyWrite(`press ${code}\n`)) return Promise.resolve();
     return this.shell(['input', 'keyevent', String(code)]);
   }
-  // Korean and other Unicode text go through the ADB keyboard broadcast.
+  // Korean and other Unicode text go through the ADB keyboard broadcast. Android's own keyboard comes back
+  // a few seconds after the last typed text, so touch typing on the phone screen keeps working.
   text(value) {
     if (typeof value !== 'string' || !value || Buffer.byteLength(value) > 8192) return Promise.resolve();
     const encoded = Buffer.from(value, 'utf8').toString('base64');
+    clearTimeout(this.imeRestore);
     this.textChain = this.textChain.catch(() => {}).then(async () => {
       const current = await this.shell(['settings', 'get', 'secure', 'default_input_method']).catch(() => '');
       if (current !== seats.IME) { await this.shell(['ime', 'set', seats.IME]); await new Promise(r => setTimeout(r, 400)); }
       await this.shell(['am', 'broadcast', '--user', '0', '-a', 'ADB_INPUT_B64', '-p', 'com.android.adbkeyboard', '--es', 'msg', encoded]);
     });
+    this.imeRestore = setTimeout(() => {
+      this.textChain = this.textChain.catch(() => {}).then(() => this.shell(['ime', 'set', seats.DEFAULT_IME])).catch(() => {});
+    }, 8000);
     return this.textChain;
   }
   launch(pkg) {
@@ -163,39 +168,6 @@ class Device {
       }
       return nodes;
     } catch { return []; }
-  }
-
-  // ---------- the viewer's own keyboard ----------
-  // A page can raise the iPhone keyboard only inside a touch, so it gets the text-field areas ahead of time,
-  // plus whether Android currently wants a keyboard (to hide it again, or offer a tap-to-type hint).
-  onTouch() {
-    this.imeUntil = Date.now() + 6000;
-    if (!this.imeTimer) this.imeTimer = setTimeout(() => this.pollIme(), 300);
-    clearTimeout(this.fieldsTimer);
-    this.fieldsTimer = setTimeout(() => this.sendFields(), 900);
-  }
-  async pollIme() {
-    this.imeTimer = null;
-    if (!this.clients.size) return;
-    try {
-      const shown = /mInputShown=true/.test(await this.shell(['dumpsys', 'input_method'], 5000));
-      if (shown !== this.imeShown) { this.imeShown = shown; this.sendJson({ type: 'ime', shown }); }
-    } catch {}
-    if (Date.now() < this.imeUntil) this.imeTimer = setTimeout(() => this.pollIme(), 600);
-  }
-  async sendFields() {
-    if (!this.clients.size) return;
-    try {
-      const xml = await this.dumpUi();
-      const fields = [];
-      for (const m of xml.matchAll(/<node ([^>]*?)\/?>/g)) {
-        if (!/class="android\.widget\.(EditText|AutoCompleteTextView|MultiAutoCompleteTextView)"/.test(m[1])) continue;
-        const b = /bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/.exec(m[1]);
-        if (b) { const [x1, y1, x2, y2] = b.slice(1).map(Number); if (x2 > x1 && y2 > y1) fields.push([x1, y1, x2, y2]); }
-        if (fields.length >= 30) break;
-      }
-      this.sendJson({ type: 'fields', fields });
-    } catch {}
   }
 
   inUse() { return this.clients.size > 0 || this.holds > 0; }

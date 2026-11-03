@@ -16,6 +16,7 @@ const TEMPLATE = path.join(DATA_ROOT, 'template');
 const ADB_BASE = Number(env.ADB_BASE_PORT || 5600);
 const WIDTH = 720, HEIGHT = 1560;
 const IME = 'com.android.adbkeyboard/.AdbIME';
+const DEFAULT_IME = 'com.android.inputmethod.latin/.LatinIME';
 
 const docker = (args, timeout = 30000) => run('docker', args, { timeout, maxBuffer: 4 * 1024 * 1024 }).then(r => r.stdout.trim());
 const adb = (serial, args, timeout = 15000) => run('adb', ['-s', serial, ...args], { timeout, maxBuffer: 4 * 1024 * 1024 }).then(r => r.stdout.trim());
@@ -68,8 +69,7 @@ async function configure(serial) {
     ['shell', 'svc', 'power', 'stayon', 'true'],
     ['shell', 'input', 'keyevent', '224'],
     ['shell', 'ime', 'enable', IME],
-    // Typing comes from the viewer's own keyboard, so Android's on-screen keyboard never covers the screen.
-    ['shell', 'ime', 'set', IME],
+    ['shell', 'ime', 'set', DEFAULT_IME],
   ];
   for (const step of steps) { try { await adb(serial, step); } catch {} }
 }
@@ -131,4 +131,4 @@ async function status(n) {
   return { seat: n, state, error: lastError.get(n) || null, running: seats.length, maxRunning: MAX_RUNNING };
 }
 
-module.exports = { SEAT_COUNT, MAX_RUNNING, WIDTH, HEIGHT, IME, seatNumber, serialOf, wake, sleepSeat, status, isRunning, adb };
+module.exports = { SEAT_COUNT, MAX_RUNNING, WIDTH, HEIGHT, IME, DEFAULT_IME, seatNumber, serialOf, wake, sleepSeat, status, isRunning, adb };
