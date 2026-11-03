@@ -14,12 +14,12 @@ class ScrcpyStream {
   async adb(...args) { return adbExec('adb',['-s',this.device,...args],{timeout:10000,maxBuffer:1048576}); }
   async start() {
     try {
-      await this.adb('push',this.serverJar,'/data/local/tmp/cloud-phone-scrcpy.jar');
+      await this.adb('push',this.serverJar,'/data/local/tmp/real-smart-phone-scrcpy.jar');
       if(this.stopped) return;
       const {stdout}=await this.adb('forward','tcp:0','localabstract:scrcpy');
       this.port=Number(stdout.trim()); if(!this.port) throw Error('invalid adb forward port');
       if(this.stopped){await this.cleanup();return;}
-      this.encoder=spawn('adb',['-s',this.device,'shell','CLASSPATH=/data/local/tmp/cloud-phone-scrcpy.jar','app_process','/','com.genymobile.scrcpy.Server','1.25','log_level=error','tunnel_forward=true','control=false','cleanup=false','send_device_meta=false','send_dummy_byte=false','send_frame_meta=true',`bit_rate=${this.bitRate}`,`max_fps=${this.maxFps}`],{stdio:'ignore'});
+      this.encoder=spawn('adb',['-s',this.device,'shell','CLASSPATH=/data/local/tmp/real-smart-phone-scrcpy.jar','app_process','/','com.genymobile.scrcpy.Server','1.25','log_level=error','tunnel_forward=true','control=false','cleanup=false','send_device_meta=false','send_dummy_byte=false','send_frame_meta=true',`bit_rate=${this.bitRate}`,`max_fps=${this.maxFps}`],{stdio:'ignore'});
       this.procs.push(this.encoder); this.encoder.on('error',e=>this.fail(e));this.encoder.on('exit',()=>this.fail(Error('encoder exited')));
       this.decoder=spawn('ffmpeg',['-hide_banner','-loglevel','error','-flags','low_delay','-probesize','32','-analyzeduration','0','-f','h264','-i','pipe:0','-vsync','0','-vcodec','mjpeg','-threads','1','-flush_packets','1','-q:v','7','-f','image2pipe','pipe:1'],{stdio:['pipe','pipe','ignore']});
       this.procs.push(this.decoder);this.decoder.on('error',e=>this.fail(e));this.decoder.on('exit',()=>this.fail(Error('decoder exited')));this.decoder.stdin.on('error',e=>this.fail(e));

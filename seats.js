@@ -10,7 +10,7 @@ const run = promisify(execFile);
 const env = process.env;
 const SEAT_COUNT = Number(env.SEAT_COUNT || 10);
 const MAX_RUNNING = Number(env.MAX_RUNNING || 2);
-const IMAGE = env.ANDROID_IMAGE || 'cloud-phone-android:12';
+const IMAGE = env.ANDROID_IMAGE || 'real-smart-phone-android:12';
 const DATA_ROOT = env.SEAT_DATA || '/home/ubuntu/phone-seats';
 const TEMPLATE = path.join(DATA_ROOT, 'template');
 const ADB_BASE = Number(env.ADB_BASE_PORT || 5600);
@@ -37,7 +37,7 @@ async function isRunning(n) {
   catch { return false; }
 }
 async function runningSeats() {
-  const out = await docker(['ps', '--filter', 'label=cloud-phone.seat', '--format', '{{.Label "cloud-phone.seat"}}'], 10000);
+  const out = await docker(['ps', '--filter', 'label=real-smart-phone.seat', '--format', '{{.Label "real-smart-phone.seat"}}'], 10000);
   return out ? out.split('\n').map(Number).filter(Boolean) : [];
 }
 
@@ -54,7 +54,7 @@ async function prepareData(n) {
 async function create(n, dataDir) {
   try { await docker(['rm', '-f', containerName(n)], 20000); } catch {}
   await docker(['run', '-d', '--name', containerName(n), '--privileged', '--restart', 'no',
-    '--label', `cloud-phone.seat=${n}`, '--memory', env.SEAT_MEMORY || '3g', '--cpus', env.SEAT_CPUS || '2',
+    '--label', `real-smart-phone.seat=${n}`, '--memory', env.SEAT_MEMORY || '3g', '--cpus', env.SEAT_CPUS || '2',
     '-v', `${dataDir}:/data`, '-p', `${serialOf(n)}:5555`, IMAGE,
     'androidboot.redroid_gpu_mode=guest', 'androidboot.use_memfd=true',
     `androidboot.redroid_width=${WIDTH}`, `androidboot.redroid_height=${HEIGHT}`,

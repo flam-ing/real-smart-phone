@@ -1,16 +1,16 @@
 [Unit]
-Description=Cloud Phone (per-seat Android with AI)
+Description=Real Smart Phone (per-seat Android with AI)
 After=network.target docker.service
 Requires=docker.service
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/cloud-phone
-EnvironmentFile=/etc/cloud-phone.env
+WorkingDirectory=/opt/real-smart-phone
+EnvironmentFile=/etc/real-smart-phone.env
 Environment=TZ=Asia/Seoul
 ExecStartPre=/usr/local/bin/init-android-binder.sh
-ExecStart=/usr/bin/node /opt/cloud-phone/server.js
+ExecStart=/usr/bin/node /opt/real-smart-phone/server.js
 Restart=always
 RestartSec=2
 

@@ -1,5 +1,5 @@
 'use strict';
-// Cloud Phone: each seat number gets its own Android phone in the cloud, with an AI that can operate it.
+// Real Smart Phone: each seat number gets its own Android phone in the cloud, with an AI that can operate it.
 // Beta: a seat is chosen by number only; accounts come later.
 const http = require('http');
 const fs = require('fs');
@@ -157,4 +157,4 @@ function connect(ws, n) {
   ws.on('close', () => { clearInterval(timer); device.removeClient(ws); });
 }
 
-server.listen(PORT, '127.0.0.1', () => console.log(`Cloud Phone on 127.0.0.1:${PORT}${BASE}/`));
+server.listen(PORT, '127.0.0.1', () => console.log(`Real Smart Phone on 127.0.0.1:${PORT}${BASE}/`));

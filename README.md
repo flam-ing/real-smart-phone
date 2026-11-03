@@ -1,4 +1,4 @@
-# Cloud Phone
+# Real Smart Phone
 
 Each seat number opens its own Android phone in the cloud. An AI can operate the phone for you, now or on a schedule.
 
@@ -10,11 +10,11 @@ Each seat number opens its own Android phone in the cloud. An AI can operate the
 
 ## Run
 
-Requirements: Linux host with binder support, Docker, `adb`, `ffmpeg`, Node 20+, `/usr/share/scrcpy/scrcpy-server` (v1.25).
+Requirements: Linux host with binder support, Docker, `adb`, `ffmpeg`, Node 18+, `/usr/share/scrcpy/scrcpy-server` (v1.25).
 
 ```sh
 npm install
-cp deploy/cloud-phone.env.example /etc/cloud-phone.env   # fill in the AI key
+cp deploy/real-smart-phone.env.example /etc/real-smart-phone.env   # fill in the AI key
 node server.js
 ```
 

@@ -138,8 +138,8 @@ class Device {
   /** Visible UI elements with text, for the AI to aim taps. */
   async uiNodes() {
     try {
-      await this.shell(['uiautomator', 'dump', '--compressed', '/data/local/tmp/cloud-phone-ui.xml'], 15000);
-      const xml = await this.shell(['cat', '/data/local/tmp/cloud-phone-ui.xml'], 8000);
+      await this.shell(['uiautomator', 'dump', '--compressed', '/data/local/tmp/real-smart-phone-ui.xml'], 15000);
+      const xml = await this.shell(['cat', '/data/local/tmp/real-smart-phone-ui.xml'], 8000);
       const nodes = [];
       for (const m of xml.matchAll(/<node ([^>]*?)\/?>/g)) {
         const attr = name => (new RegExp(`${name}="([^"]*)"`).exec(m[1]) || [])[1] || '';
@@ -159,7 +159,7 @@ class Device {
   /** A photo from the viewer's real camera goes into Android's gallery. */
   async addPhoto(buffer) {
     const name = `IMG_${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}.jpg`;
-    const temp = require('path').join(require('os').tmpdir(), `cloud-phone-${this.n}-${name}`);
+    const temp = require('path').join(require('os').tmpdir(), `real-smart-phone-${this.n}-${name}`);
     require('fs').writeFileSync(temp, buffer, { mode: 0o600 });
     try {
       await seats.adb(this.serial, ['push', temp, `/sdcard/DCIM/Camera/${name}`], 30000);
