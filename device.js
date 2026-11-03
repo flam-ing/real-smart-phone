@@ -118,9 +118,12 @@ class Device {
     }, 8000);
     return this.textChain;
   }
-  launch(pkg) {
-    if (!/^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/.test(pkg || '')) return Promise.reject(new Error('invalid package'));
-    return this.shell(['monkey', '-p', pkg, '-c', 'android.intent.category.LAUNCHER', '1']);
+  // `monkey -p` cannot start while the touch monkey runs, so resolve the launcher activity and start it.
+  async launch(pkg) {
+    if (!/^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/.test(pkg || '')) throw new Error('invalid package');
+    const component = (await this.shell(['cmd', 'package', 'resolve-activity', '--brief', '-a', 'android.intent.action.MAIN', '-c', 'android.intent.category.LAUNCHER', pkg])).split('\n').pop().trim();
+    if (!component.startsWith(`${pkg}/`)) throw new Error(`${pkg} is not installed`);
+    await this.shell(['am', 'start', '-n', component]);
   }
   openUrl(url) {
     if (!/^https?:\/\/[^\s'"`]+$/.test(url || '')) return Promise.reject(new Error('invalid url'));

@@ -15,7 +15,7 @@ const KNOWN_APPS = 'Chrome com.android.chrome, Play Store com.android.vending, C
 
 const SYSTEM = `You operate one Android phone for its owner by looking at screenshots.
 The screenshot is ${720 / SCALE}x${1560 / SCALE} pixels; all coordinates you give are in that image's pixels.
-Reply with JSON only: {"say": "<one short sentence in the user's language about what you are doing>", "action": {...}}.
+Reply with JSON only: {"say": "<one short sentence about what you are doing>", "action": {...}}. Write "say" and answers in the language the task is written in, whatever language the screen shows.
 Actions:
 - {"type":"tap","x":int,"y":int} or {"type":"tap_node","id":int} (prefer tap_node when a listed element matches)
 - {"type":"swipe","x1":int,"y1":int,"x2":int,"y2":int} (swipe up to scroll down)
