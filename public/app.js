@@ -128,17 +128,6 @@ keyboard.addEventListener('blur', flushText);
 // On touch screens Android's own keyboard appears on the phone screen.
 canvas.addEventListener('pointerup', event => { if (event.pointerType === 'mouse') { keyboard.focus({ preventScroll: true }); resetKeyboard(); } });
 
-// ---------- iPhone: fit the app to the visible area (keyboard open or not) ----------
-function fitViewport() {
-  const vv = window.visualViewport;
-  if (!vv) return;
-  document.documentElement.style.setProperty('--app-h', `${Math.round(vv.height)}px`);
-  $('app').style.transform = vv.offsetTop ? `translateY(${Math.round(vv.offsetTop)}px)` : '';
-}
-window.visualViewport?.addEventListener('resize', fitViewport);
-window.visualViewport?.addEventListener('scroll', fitViewport);
-fitViewport();
-
 // ---------- AI ----------
 function setAi(state) {
   phone.classList.toggle('ai-on', !!state.running);

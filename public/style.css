@@ -22,8 +22,8 @@ button, input, select { font: inherit; }
 .seat-note { margin: 6px 0 0; font-size: 12px; line-height: 1.6; color: #8a929d; }
 
 /* Phone */
-/* Fixed to the visible viewport: iOS must not scroll the page when its keyboard opens. */
-.app { position: fixed; top: 0; left: 0; width: 100%; height: var(--app-h, 100dvh); display: flex; flex-direction: column; align-items: center; padding-top: env(safe-area-inset-top, 0px); }
+/* Fixed so the page itself never scrolls; iOS pans to a focused field on its own. Top padding clears the notch. */
+.app { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; height: 100dvh; display: flex; flex-direction: column; align-items: center; padding-top: env(safe-area-inset-top, 0px); }
 .view { flex: 1 1 auto; min-height: 0; width: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
 .phone { height: min(100%, 216.6667vw); max-height: 100%; width: auto; max-width: 100%; aspect-ratio: 720 / 1560; position: relative; overflow: hidden; background: #08090a; }
 canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; }
@@ -76,7 +76,7 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: 
 .msg small { display: block; color: var(--muted); font-size: 11px; margin-bottom: 2px; }
 .empty { color: var(--muted); font-size: 13px; line-height: 1.6; }
 .compose { display: flex; gap: 8px; align-items: center; border-top: 1px solid #e5e7eb; padding: 10px 12px 14px; }
-.compose input { flex: 1; min-width: 0; height: 40px; border: 1px solid #dedfe5; border-radius: 20px; background: #f2f3f5; padding: 0 14px; font-size: 14px; color: var(--text); }
+.compose input { flex: 1; min-width: 0; height: 40px; border: 1px solid #dedfe5; border-radius: 20px; background: #f2f3f5; padding: 0 14px; font-size: 16px; color: var(--text); }
 .compose button { width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--meta); color: #fff; font-size: 19px; cursor: pointer; }
 .schedules { overflow: auto; flex: 1; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
 .sched { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--sheet-line); border-radius: 12px; background: #fff; }
@@ -85,7 +85,7 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: 
 .sched p { margin: 3px 0 0; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .sched button { border: 0; background: #eceef1; border-radius: 8px; padding: 5px 8px; font-size: 12px; cursor: pointer; }
 .schedule-form { border-top: 1px solid #e5e7eb; padding: 10px 12px 14px; display: flex; flex-direction: column; gap: 8px; }
-.schedule-form input, .schedule-form select { height: 38px; border: 1px solid #dedfe5; border-radius: 10px; background: #f6f7f9; padding: 0 10px; font-size: 14px; min-width: 0; }
+.schedule-form input, .schedule-form select { height: 38px; border: 1px solid #dedfe5; border-radius: 10px; background: #f6f7f9; padding: 0 10px; font-size: 16px; min-width: 0; }
 .schedule-row { display: flex; gap: 6px; }
 .schedule-row input { flex: 1; }
 .schedule-row input[hidden] { display: none; }
