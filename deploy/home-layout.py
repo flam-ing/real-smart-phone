@@ -12,9 +12,10 @@ import time
 DOCK = ["com.android.chrome", "com.android.camera2", "com.android.vending", "com.android.calendar"]
 HOME = [
     "com.facebook.katana", "com.instagram.android", "com.instagram.barcelona", "com.whatsapp",
-    "com.kakao.talk", "com.towneers.www", "viva.republica.toss", "com.google.android.youtube",
+    "com.kakao.talk", "com.google.android.youtube", "com.google.android.apps.maps", "com.spotify.music",
     "com.google.android.apps.photos", "com.android.gallery3d", "com.android.contacts", "com.android.settings",
 ]
+# Karrot and Toss refuse to run on an emulated phone (their security check), so they are left out.
 COLUMNS = 4
 
 seat = int(sys.argv[1])
