@@ -14,7 +14,7 @@ Requirements: Linux host with binder support, Docker, `adb`, `ffmpeg`, Node 18+,
 
 ```sh
 npm install
-cp deploy/real-smart-phone.env.example /etc/real-smart-phone.env   # fill in the AI key
+cp deploy/real-smart-phone.env.example /etc/real-smart-phone.env   # fill in the Meta Model API key
 node server.js
 ```
 
@@ -22,4 +22,4 @@ Deployment files are in `deploy/` (systemd unit, nginx location, Android image).
 
 ## AI provider
 
-Configuration only. `AI_PROVIDER=gemini` with `GEMINI_API_KEY`, or `AI_PROVIDER=openai-compatible` with `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL` for the Meta Model API.
+Configuration only. `AI_PROVIDER=meta` (default) uses Muse Spark on the Meta Model API (`MODEL_API_KEY`, `AI_MODEL=muse-spark-1.3`). `AI_PROVIDER=gemini` with `GEMINI_API_KEY`, or `AI_PROVIDER=openai-compatible` with `AI_BASE_URL`, `AI_API_KEY` and `AI_MODEL`, also work.
