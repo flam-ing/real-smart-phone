@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="app">
+  <main class="app" id="app">
     <div class="view">
       <section class="phone" id="phone" aria-label="Cloud phone">
         <canvas id="screen" width="720" height="1560" aria-label="Phone screen. Touch to control it."></canvas>
@@ -57,10 +57,11 @@
       </section>
     </div>
     <nav class="nav" aria-label="Phone controls">
-      <button type="button" id="back" aria-label="Back"><span class="symbol">◀</span></button>
-      <button type="button" id="home" aria-label="Home"><span class="symbol">●</span></button>
-      <button type="button" id="recent" aria-label="Recent apps"><span class="symbol">■</span></button>
-      <button type="button" id="camera" aria-label="Add a photo from this device's camera"><span class="symbol">◉</span></button>
+      <button type="button" id="back" aria-label="Back" title="Back"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button type="button" id="home" aria-label="Home" title="Home"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></button>
+      <button type="button" id="recent" aria-label="Recent apps" title="Recent apps"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></button>
+      <button type="button" id="keys" aria-label="Keyboard" title="Type on the phone" aria-pressed="false"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M6 9.5h1M9.5 9.5h1M13 9.5h1M16.5 9.5h1M6 12.5h1M9.5 12.5h1M13 12.5h1M16.5 12.5h1M8 15.5h8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button>
+      <button type="button" id="camera" aria-label="Camera: add a photo to the phone" title="Add a photo from this device"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.3l1.4-2h5.6l1.4 2h2.3A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><circle cx="12" cy="12.8" r="3.3" fill="none" stroke="currentColor" stroke-width="1.9"/></svg></button>
       <button class="ai" id="ai" type="button" aria-label="AI" aria-expanded="false" aria-controls="drawer">AI</button>
     </nav>
     <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>

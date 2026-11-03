@@ -1,5 +1,7 @@
 # Android 12 (redroid) with Google Play, plus the ADB keyboard for Unicode/Korean text input.
-# Build: copy ADBKeyboard.apk next to this file first (see deploy/install.sh).
+# The web page has its own Back/Home/Recent buttons, so Android's navigation bar is turned off (qemu.hw.mainkeys=1).
+# Build: put ADBKeyboard.apk and the base image's /system/build.prop next to this file first.
 ARG BASE=remote-mobile-redroid:12-gapps-20261029
 FROM ${BASE}
 COPY ADBKeyboard.apk /system/app/ADBKeyboard/ADBKeyboard.apk
+COPY build.prop /system/build.prop

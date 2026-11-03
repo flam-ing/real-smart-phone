@@ -76,7 +76,6 @@ canvas.addEventListener('pointerdown', event => {
   gesture = { id: event.pointerId, last: p };
   try { canvas.setPointerCapture(event.pointerId); } catch {}
   sendJson({ type: 'pointer_down', ...p });
-  if (event.pointerType === 'mouse') keyboard.focus({ preventScroll: true });
 });
 canvas.addEventListener('pointermove', event => {
   if (!gesture || event.pointerId !== gesture.id) return;
@@ -96,21 +95,51 @@ $('back').onclick = () => sendJson({ type: 'key', keyCode: 4 });
 $('home').onclick = () => sendJson({ type: 'key', keyCode: 3 });
 $('recent').onclick = () => sendJson({ type: 'key', keyCode: 187 });
 
-// ---------- desktop keyboard (Korean IME composition is sent as finished text) ----------
+// ---------- keyboard: desktop keys, or the iPhone/Android keyboard via the keyboard button ----------
+// A hidden field keeps one placeholder character so Backspace is visible even when nothing was typed.
+const SEED = '​';
 const keyboard = document.createElement('textarea');
-Object.assign(keyboard.style, { position: 'fixed', top: 0, left: 0, width: '1px', height: '1px', opacity: 0, border: 0, padding: 0, pointerEvents: 'none' });
-keyboard.setAttribute('aria-hidden', 'true'); keyboard.tabIndex = -1; document.body.appendChild(keyboard);
+keyboard.className = 'typing-input';
+for (const [k, v] of Object.entries({ 'aria-label': 'Type on the phone', autocapitalize: 'off', autocomplete: 'off', autocorrect: 'off', spellcheck: 'false' })) keyboard.setAttribute(k, v);
+document.body.appendChild(keyboard);
 let composing = false;
-const flushText = () => { if (composing) return; const text = keyboard.value; keyboard.value = ''; if (text) sendJson({ type: 'text', text }); };
+const resetKeyboard = () => { keyboard.value = SEED; try { keyboard.setSelectionRange(1, 1); } catch {} };
+function flushText() {
+  if (composing) return;
+  const value = keyboard.value;
+  if (!value.includes(SEED)) sendJson({ type: 'key', keyCode: 67 }); // the placeholder was deleted: Backspace
+  const text = value.replaceAll(SEED, '');
+  if (text) sendJson({ type: 'text', text });
+  resetKeyboard();
+}
 keyboard.addEventListener('compositionstart', () => { composing = true; });
 keyboard.addEventListener('compositionend', () => { composing = false; setTimeout(flushText, 20); });
 keyboard.addEventListener('input', event => { if (!composing && !event.isComposing) flushText(); });
-const KEYS = { Backspace: 67, Delete: 112, Enter: 66, Tab: 61, Escape: 111, ArrowUp: 19, ArrowDown: 20, ArrowLeft: 21, ArrowRight: 22 };
+const KEYS = { Enter: 66, Tab: 61, Escape: 111, ArrowUp: 19, ArrowDown: 20, ArrowLeft: 21, ArrowRight: 22, Delete: 112 };
 keyboard.addEventListener('keydown', event => {
   if (composing || event.isComposing || event.keyCode === 229 || event.metaKey || event.ctrlKey) return;
   if (KEYS[event.key] === undefined) return;
   event.preventDefault(); flushText(); sendJson({ type: 'key', keyCode: KEYS[event.key] });
 });
+const setKeysButton = () => $('keys').setAttribute('aria-pressed', String(document.activeElement === keyboard));
+keyboard.addEventListener('focus', () => { resetKeyboard(); setKeysButton(); });
+keyboard.addEventListener('blur', () => { flushText(); setKeysButton(); });
+function openKeyboard() { keyboard.focus({ preventScroll: true }); resetKeyboard(); }
+// Mouse users type right after clicking the screen; touch users open the keyboard with its button.
+canvas.addEventListener('pointerup', event => { if (event.pointerType === 'mouse') openKeyboard(); });
+$('keys').addEventListener('pointerdown', event => event.preventDefault()); // keep focus while toggling
+$('keys').onclick = () => { if (document.activeElement === keyboard) keyboard.blur(); else openKeyboard(); };
+
+// ---------- iPhone: fit the app to the visible area (keyboard open or not) ----------
+function fitViewport() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  document.documentElement.style.setProperty('--app-h', `${Math.round(vv.height)}px`);
+  $('app').style.transform = vv.offsetTop ? `translateY(${Math.round(vv.offsetTop)}px)` : '';
+}
+window.visualViewport?.addEventListener('resize', fitViewport);
+window.visualViewport?.addEventListener('scroll', fitViewport);
+fitViewport();
 
 // ---------- AI ----------
 function setAi(state) {

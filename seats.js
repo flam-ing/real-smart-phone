@@ -68,6 +68,8 @@ async function configure(serial) {
     ['shell', 'svc', 'power', 'stayon', 'true'],
     ['shell', 'input', 'keyevent', '224'],
     ['shell', 'ime', 'enable', IME],
+    // Typing comes from the viewer's own keyboard, so Android's on-screen keyboard never covers the screen.
+    ['shell', 'ime', 'set', IME],
   ];
   for (const step of steps) { try { await adb(serial, step); } catch {} }
 }
@@ -79,8 +81,13 @@ async function boot(n) {
     if (running.length >= MAX_RUNNING) throw Object.assign(new Error('capacity'), { code: 'capacity', running });
     states.set(n, 'starting');
     const dataDir = await prepareData(n);
-    try { await docker(['start', containerName(n)], 30000); }
-    catch { await create(n, dataDir); }
+    // A seat made from an older image is recreated on the current one; its /data stays.
+    const [have, want] = await Promise.all([
+      docker(['inspect', '-f', '{{.Image}}', containerName(n)], 10000).catch(() => ''),
+      docker(['image', 'inspect', '-f', '{{.Id}}', IMAGE], 10000).catch(() => ''),
+    ]);
+    if (have && have === want) await docker(['start', containerName(n)], 30000).catch(() => create(n, dataDir));
+    else await create(n, dataDir);
   }
   states.set(n, 'booting');
   const deadline = Date.now() + 240000;
