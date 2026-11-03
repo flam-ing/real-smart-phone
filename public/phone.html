@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
@@ -12,55 +12,55 @@
 <body>
   <main class="app">
     <div class="view">
-      <section class="phone" id="phone" aria-label="클라우드 휴대폰 화면">
-        <canvas id="screen" width="720" height="1560" aria-label="휴대폰 화면. 터치하여 조작합니다."></canvas>
+      <section class="phone" id="phone" aria-label="Cloud phone">
+        <canvas id="screen" width="720" height="1560" aria-label="Phone screen. Touch to control it."></canvas>
         <div class="ai-ring" aria-hidden="true"></div>
-        <div class="ai-badge" id="aiBadge" hidden><span class="dot"></span><span id="aiText">AI가 조작 중</span><button type="button" id="aiStop">멈추기</button></div>
-        <div class="connection" id="connection" role="status">휴대폰에 연결하는 중…</div>
+        <div class="ai-badge" id="aiBadge" hidden><span class="dot"></span><span id="aiText">AI is using the phone</span><button type="button" id="aiStop">Stop</button></div>
+        <div class="connection" id="connection" role="status">Connecting to your phone…</div>
         <div class="shade" id="shade" aria-hidden="true"></div>
         <aside class="drawer" id="drawer" role="dialog" aria-label="AI" aria-hidden="true" inert>
           <div class="handle" aria-hidden="true"></div>
           <header class="drawer-head">
             <div class="tabs" role="tablist">
               <button type="button" role="tab" id="tabChat" aria-selected="true">AI</button>
-              <button type="button" role="tab" id="tabSchedule" aria-selected="false">스케줄</button>
+              <button type="button" role="tab" id="tabSchedule" aria-selected="false">Schedules</button>
             </div>
-            <button class="close" id="close" type="button" aria-label="닫기">×</button>
+            <button class="close" id="close" type="button" aria-label="Close">×</button>
           </header>
           <section class="pane" id="paneChat">
             <div class="messages" id="messages" role="log"></div>
             <form class="compose" id="compose">
-              <input id="prompt" autocomplete="off" placeholder="휴대폰에서 할 일을 시켜보세요" aria-label="AI에게 요청">
-              <button type="submit" aria-label="보내기">↑</button>
+              <input id="prompt" autocomplete="off" placeholder="Ask the AI to do something on your phone" aria-label="Ask the AI">
+              <button type="submit" aria-label="Send">↑</button>
             </form>
           </section>
           <section class="pane" id="paneSchedule" hidden>
             <div class="schedules" id="schedules"></div>
             <form class="schedule-form" id="scheduleForm">
-              <input id="schedPrompt" placeholder="할 일 (예: 인스타그램 새 알림 확인해서 알려줘)" aria-label="스케줄 할 일" required>
+              <input id="schedPrompt" placeholder="Task (e.g. check new Instagram notifications and summarize)" aria-label="Scheduled task" required>
               <div class="schedule-row">
-                <select id="schedPreset" aria-label="반복">
-                  <option value="daily">매일</option>
-                  <option value="weekday">평일</option>
-                  <option value="every">몇 분마다</option>
-                  <option value="cron">직접 (cron)</option>
+                <select id="schedPreset" aria-label="Repeat">
+                  <option value="daily">Every day</option>
+                  <option value="weekday">Weekdays</option>
+                  <option value="every">Every N min</option>
+                  <option value="cron">Custom (cron)</option>
                 </select>
-                <input id="schedTime" type="time" value="09:00" aria-label="시각">
-                <input id="schedEvery" type="number" min="5" max="720" value="60" aria-label="분 간격" hidden>
+                <input id="schedTime" type="time" value="09:00" aria-label="Time">
+                <input id="schedEvery" type="number" min="5" max="720" value="60" aria-label="Minutes" hidden>
                 <input id="schedCron" placeholder="0 9 * * *" aria-label="cron" hidden>
-                <button type="submit">추가</button>
+                <button type="submit">Add</button>
               </div>
-              <p class="schedule-note" id="schedNote">한국 시간 기준입니다. 브라우저를 닫아도 서버에서 실행됩니다.</p>
+              <p class="schedule-note" id="schedNote">Korea time. Runs on the server even with this page closed.</p>
             </form>
           </section>
         </aside>
       </section>
     </div>
-    <nav class="nav" aria-label="휴대폰 조작">
-      <button type="button" id="back" aria-label="뒤로"><span class="symbol">◀</span></button>
-      <button type="button" id="home" aria-label="홈"><span class="symbol">●</span></button>
-      <button type="button" id="recent" aria-label="최근 앱"><span class="symbol">■</span></button>
-      <button type="button" id="camera" aria-label="내 카메라로 사진 넣기"><span class="symbol">◉</span></button>
+    <nav class="nav" aria-label="Phone controls">
+      <button type="button" id="back" aria-label="Back"><span class="symbol">◀</span></button>
+      <button type="button" id="home" aria-label="Home"><span class="symbol">●</span></button>
+      <button type="button" id="recent" aria-label="Recent apps"><span class="symbol">■</span></button>
+      <button type="button" id="camera" aria-label="Add a photo from this device's camera"><span class="symbol">◉</span></button>
       <button class="ai" id="ai" type="button" aria-label="AI" aria-expanded="false" aria-controls="drawer">AI</button>
     </nav>
     <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>

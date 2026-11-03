@@ -7,6 +7,8 @@ const path = require('path');
 const { provider, parseJson } = require('./providers');
 
 const MAX_STEPS = Number(process.env.AI_MAX_STEPS || 15);
+// USD per million tokens (Muse Spark 1.3 list price); used only to estimate spending in the log and usage file.
+const PRICE = { input: Number(process.env.AI_PRICE_INPUT || 1.25), cached: Number(process.env.AI_PRICE_CACHED || 0.15), output: Number(process.env.AI_PRICE_OUTPUT || 4.25) };
 const SCALE = 2; // 720x1560 screen -> 360x780 image
 const KEYS = { back: 4, home: 3, enter: 66, recent: 187, delete: 67 };
 const KNOWN_APPS = 'Chrome com.android.chrome, Play Store com.android.vending, Camera com.android.camera2, Calendar com.android.calendar, Gallery com.android.gallery3d, Facebook com.facebook.katana, Instagram com.instagram.android, Threads com.instagram.barcelona, WhatsApp com.whatsapp, KakaoTalk com.kakao.talk';
@@ -56,6 +58,16 @@ function createAgents({ dataDir, deviceFor, ensureSeat }) {
     deviceFor(n).sendJson({ type: 'chat', message });
     return message;
   }
+  // Token usage per seat and in total, so the limited API credit can be watched.
+  const usageFile = path.join(dataDir, 'usage.json');
+  function loadUsage() { try { return JSON.parse(fs.readFileSync(usageFile, 'utf8')); } catch { return { total: {}, seats: {} }; } }
+  function addUsage(n, run) {
+    const usage = loadUsage();
+    for (const bucket of [usage.total, usage.seats[n] ||= {}]) for (const [key, value] of Object.entries(run)) bucket[key] = (bucket[key] || 0) + value;
+    try { fs.mkdirSync(dataDir, { recursive: true }); fs.writeFileSync(usageFile, JSON.stringify(usage)); } catch {}
+    return usage;
+  }
+  const cost = u => ((u.input || 0) - (u.cached || 0)) * PRICE.input / 1e6 + (u.cached || 0) * PRICE.cached / 1e6 + (u.output || 0) * PRICE.output / 1e6;
   const isRunning = n => running.has(n);
   function stop(n) { const job = running.get(n); if (job) job.stop = true; }
   function announce(n, state) { deviceFor(n).sendJson({ type: 'ai', ...state }); }
@@ -85,9 +97,10 @@ function createAgents({ dataDir, deviceFor, ensureSeat }) {
     const job = { stop: false }; running.set(n, job);
     const device = deviceFor(n);
     device.hold();
-    announce(n, { running: true, step: 0, text: '화면을 보는 중' });
+    announce(n, { running: true, step: 0, text: 'Looking at the screen' });
     const log = [];
     let answer = '';
+    const spent = { runs: 1, steps: 0, input: 0, cached: 0, output: 0, reasoning: 0 };
     try {
       await ensureSeat(n);
       const apps = await device.shell(['pm', 'list', 'packages', '-3']).then(o => o.replace(/package:/g, '').split('\n').filter(Boolean).slice(0, 40).join(', ')).catch(() => '');
@@ -98,30 +111,41 @@ function createAgents({ dataDir, deviceFor, ensureSeat }) {
         const list = nodes.map((node, i) => `${i}: "${node.label}"${node.input ? ' (input)' : ''} at ${Math.round(node.x / SCALE)},${Math.round(node.y / SCALE)}`).join('\n');
         const text = `Task: ${task}\nStep ${step} of ${MAX_STEPS}.\nInstalled apps: ${apps || 'unknown'}\nDone so far:\n${log.join('\n') || '(nothing yet)'}\nVisible elements:\n${list || '(none found; use the screenshot)'}`;
         const reply = await ai.decide({ system: SYSTEM, history: [], image, text });
+        spent.steps++;
+        const u = reply.usage || {};
+        spent.input += u.prompt_tokens ?? u.promptTokenCount ?? 0;
+        spent.cached += u.prompt_tokens_details?.cached_tokens ?? u.cachedContentTokenCount ?? 0;
+        spent.output += u.completion_tokens ?? ((u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0));
+        spent.reasoning += u.completion_tokens_details?.reasoning_tokens ?? u.thoughtsTokenCount ?? 0;
         if (job.stop) break;
         let decision;
         try { decision = parseJson(reply.text); } catch { log.push(`${step}. (unreadable reply)`); continue; }
         const action = decision.action || {};
         announce(n, { running: true, step, text: decision.say || action.type });
-        if (action.type === 'done') { answer = action.answer || decision.say || '완료했습니다.'; break; }
+        if (action.type === 'done') { answer = action.answer || decision.say || 'Done.'; break; }
         try { await act(device, action, nodes); log.push(`${step}. ${JSON.stringify(action)} — ${decision.say || ''}`); }
         catch (error) { log.push(`${step}. ${JSON.stringify(action)} failed: ${error.message}`); }
         await new Promise(r => setTimeout(r, 900));
       }
-      if (!answer) answer = job.stop ? '사용자가 멈췄습니다.' : `${MAX_STEPS}단계 안에 끝내지 못했습니다. 이어서 시킬 일을 알려주세요.`;
+      if (!answer) answer = job.stop ? 'Stopped.' : `I could not finish within ${MAX_STEPS} steps. Tell me how to continue.`;
       addMessage(n, 'assistant', answer, { source });
       return answer;
     } catch (error) {
-      const text = error.code === 'ai_not_configured' ? 'AI 키가 아직 서버에 설정되지 않았습니다.' : error.code === 'capacity' ? '지금은 다른 폰들이 실행 중이라 이 폰을 깨울 수 없습니다.' : `AI 작업 중 문제가 생겼습니다: ${error.message}`;
+      const text = error.code === 'ai_not_configured' ? 'The AI is not set up on the server yet.' : error.code === 'capacity' ? 'Other phones are running, so this one cannot wake up right now.' : `Something went wrong: ${error.message}`;
       addMessage(n, 'assistant', text, { source, error: true });
       return text;
     } finally {
+      if (spent.steps) {
+        const usage = addUsage(n, spent);
+        console.log(JSON.stringify({ event: 'ai_run', seat: n, source, provider: ai.name, steps: spent.steps, input: spent.input, output: spent.output, reasoning: spent.reasoning, usd: +cost(spent).toFixed(4), totalUsd: +cost(usage.total).toFixed(4) }));
+      }
       running.delete(n); device.release();
       announce(n, { running: false });
     }
   }
 
-  return { run, stop, isRunning, history, addMessage, providerName: () => { try { return provider().name; } catch { return 'unconfigured'; } } };
+  const usage = () => { const u = loadUsage(); return { ...u, totalUsd: +cost(u.total).toFixed(4) }; };
+  return { run, stop, isRunning, history, addMessage, usage, providerName: () => { try { return provider().name; } catch { return 'unconfigured'; } } };
 }
 
 module.exports = { createAgents, SYSTEM };

@@ -13,6 +13,6 @@ test('next run of every 15 minutes', () => {
   assert.equal(next.getHours() * 60 + next.getMinutes(), 10 * 60 + 15);
 });
 test('labels and invalid input', () => {
-  assert.equal(Cron.describe('30 8 * * *'), '매일 08:30');
+  assert.equal(Cron.describe('30 8 * * *'), 'Every day 08:30');
   assert.throws(() => Cron.parse('61 * * * *'));
 });

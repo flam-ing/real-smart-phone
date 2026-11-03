@@ -80,7 +80,7 @@ async function handle(req, res) {
   if (req.method === 'GET' && route === '/') return serveFile(res, seat ? 'phone.html' : 'seat.html');
   if (req.method === 'POST' && route === '/api/seat') {
     const n = seats.seatNumber((await readJson(req)).seat);
-    if (!n) return send(res, 400, { error: `1부터 ${seats.SEAT_COUNT} 사이의 번호를 적어주세요.` });
+    if (!n) return send(res, 400, { error: `Enter a number from 1 to ${seats.SEAT_COUNT}.` });
     return send(res, 200, { seat: n }, { 'set-cookie': `${COOKIE}=${n}; Path=${BASE || '/'}; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax` });
   }
   if (req.method === 'POST' && route === '/api/leave') return send(res, 200, { ok: true }, { 'set-cookie': `${COOKIE}=; Path=${BASE || '/'}; Max-Age=0; HttpOnly; Secure; SameSite=Lax` });
@@ -92,15 +92,16 @@ async function handle(req, res) {
       deviceFor(seat).ensure().catch(() => {});
       return send(res, 202, await seatStatus(seat));
     }
+    if (req.method === 'GET' && route === '/api/usage') return send(res, 200, agents.usage());
     if (req.method === 'GET' && route === '/api/chat') return send(res, 200, { messages: agents.history(seat) });
     if (req.method === 'POST' && route === '/api/ai/stop') { agents.stop(seat); return send(res, 200, { ok: true }); }
     if (req.method === 'GET' && route === '/api/schedules') return send(res, 200, { schedules: schedules.list(seat) });
     if (req.method === 'POST' && route === '/api/schedules') return send(res, 200, { schedules: schedules.upsert(seat, await readJson(req)) });
     if (req.method === 'DELETE' && route === '/api/schedules') return send(res, 200, { schedules: schedules.remove(seat, url.searchParams.get('id')) });
     if (req.method === 'POST' && route === '/api/photo') {
-      if (!/^image\/jpeg$/.test(req.headers['content-type'] || '')) return send(res, 415, { error: 'JPEG 사진만 넣을 수 있습니다.' });
+      if (!/^image\/jpeg$/.test(req.headers['content-type'] || '')) return send(res, 415, { error: 'Only JPEG photos are supported.' });
       const body = await readBody(req, 15 * 1024 * 1024);
-      if (body[0] !== 0xff || body[1] !== 0xd8) return send(res, 415, { error: 'JPEG 사진만 넣을 수 있습니다.' });
+      if (body[0] !== 0xff || body[1] !== 0xd8) return send(res, 415, { error: 'Only JPEG photos are supported.' });
       const device = deviceFor(seat);
       await device.ensure();
       return send(res, 200, { name: await device.addPhoto(body) });
@@ -112,7 +113,7 @@ async function handle(req, res) {
 }
 
 const server = http.createServer((req, res) => {
-  handle(req, res).catch(error => { if (!res.headersSent) send(res, error.status || 500, { error: error.status ? error.message : '서버 오류가 났습니다.' }); else res.end(); if (!error.status) console.error(error); });
+  handle(req, res).catch(error => { if (!res.headersSent) send(res, error.status || 500, { error: error.status ? error.message : 'Server error.' }); else res.end(); if (!error.status) console.error(error); });
 });
 
 const wss = new WebSocket.Server({ noServer: true, maxPayload: 64 * 1024 });
@@ -147,7 +148,7 @@ function connect(ws, n) {
         const text = String(msg.text || '').trim().slice(0, 2000);
         if (!text) return;
         agents.addMessage(n, 'user', text);
-        if (agents.isRunning(n)) return agents.addMessage(n, 'assistant', '지금 하던 일이 있습니다. 멈춘 뒤 다시 시켜주세요.');
+        if (agents.isRunning(n)) return agents.addMessage(n, 'assistant', 'I am still working on the last request. Stop it first, then ask again.');
         agents.run(n, text).catch(() => {});
         return;
       }

@@ -17,12 +17,12 @@ async function drawLatest() {
 }
 function showConnection(text) { connection.textContent = text; connection.hidden = !text; }
 function stateText(s) {
-  if (!s) return '휴대폰에 연결하는 중…';
-  if (s.state === 'running') return currentBitmap ? '' : '화면을 불러오는 중…';
-  if (s.state === 'starting' || s.state === 'booting') return `${s.seat}번 휴대폰을 켜는 중… 처음에는 1~2분 걸립니다.`;
-  if (s.error === 'capacity') return `지금 ${s.running}대가 실행 중이라 잠시 기다려야 합니다. 곧 다시 시도합니다.`;
-  if (s.state === 'error') return '휴대폰을 켜지 못했습니다. 잠시 뒤 다시 시도합니다.';
-  return `${s.seat}번 휴대폰을 깨우는 중…`;
+  if (!s) return 'Connecting to your phone…';
+  if (s.state === 'running') return currentBitmap ? '' : 'Loading the screen…';
+  if (s.state === 'starting' || s.state === 'booting') return `Starting phone ${s.seat}… the first start can take a minute.`;
+  if (s.error === 'capacity') return `${s.running} phones are already running. Retrying shortly…`;
+  if (s.state === 'error') return 'Could not start the phone. Retrying shortly…';
+  return `Waking phone ${s.seat}…`;
 }
 function connect() {
   const socket = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${location.pathname.replace(/\/?$/, '/')}ws`);
@@ -43,7 +43,7 @@ function connect() {
   socket.onclose = () => {
     if (ws !== socket) return;
     cancelGesture(false); pendingFrame = null;
-    showConnection('연결이 끊겼습니다. 다시 연결하는 중…');
+    showConnection('Connection lost. Reconnecting…');
     setTimeout(connect, 2000);
   };
   socket.onerror = () => socket.close();
@@ -116,19 +116,19 @@ keyboard.addEventListener('keydown', event => {
 function setAi(state) {
   phone.classList.toggle('ai-on', !!state.running);
   $('aiBadge').hidden = !state.running;
-  if (state.running) $('aiText').textContent = state.text ? `AI · ${state.text}` : 'AI가 조작 중';
+  if (state.running) $('aiText').textContent = state.text ? `AI · ${state.text}` : 'AI is using the phone';
 }
 $('aiStop').onclick = () => sendJson({ type: 'ai_stop' });
 function messageNode(m) {
   const node = document.createElement('div');
   node.className = `msg ${m.role === 'user' ? 'user' : ''} ${m.error ? 'error' : ''}`;
-  if (m.source === 'schedule') { const tag = document.createElement('small'); tag.textContent = '스케줄 실행'; node.append(tag); }
+  if (m.source === 'schedule') { const tag = document.createElement('small'); tag.textContent = 'Scheduled run'; node.append(tag); }
   node.append(document.createTextNode(m.text));
   return node;
 }
 function renderMessages(list) {
   const box = $('messages'); box.replaceChildren();
-  if (!list.length) { const p = document.createElement('p'); p.className = 'empty'; p.textContent = '예: "크롬에서 오늘 서울 날씨 찾아줘", "인스타그램 열어서 첫 게시물 좋아요 눌러줘"'; box.append(p); }
+  if (!list.length) { const p = document.createElement('p'); p.className = 'empty'; p.textContent = 'Try: "Search today\'s weather in Seoul" or "Open Instagram and like the first post"'; box.append(p); }
   for (const m of list) box.append(messageNode(m));
   box.scrollTop = box.scrollHeight;
 }
@@ -159,21 +159,21 @@ $('tabChat').onclick = () => selectTab('chat');
 $('tabSchedule').onclick = () => selectTab('schedule');
 
 // ---------- schedules ----------
-const api = (url, options = {}) => fetch(url, { headers: { 'content-type': 'application/json' }, ...options }).then(async r => { const data = await r.json().catch(() => ({})); if (!r.ok) throw new Error(data.error || '요청하지 못했습니다'); return data; });
+const api = (url, options = {}) => fetch(url, { headers: { 'content-type': 'application/json' }, ...options }).then(async r => { const data = await r.json().catch(() => ({})); if (!r.ok) throw new Error(data.error || 'Request failed'); return data; });
 function renderSchedules(list) {
   const box = $('schedules'); box.replaceChildren();
-  if (!list.length) { const p = document.createElement('p'); p.className = 'empty'; p.textContent = '정해진 시간에 AI가 이 휴대폰에서 할 일을 등록하세요.'; box.append(p); return; }
+  if (!list.length) { const p = document.createElement('p'); p.className = 'empty'; p.textContent = 'Add a task for the AI to run on this phone at set times.'; box.append(p); return; }
   for (const s of list) {
     const row = document.createElement('div'); row.className = 'sched';
     const info = document.createElement('div');
-    const title = document.createElement('strong'); title.textContent = `${s.label}${s.enabled ? '' : ' · 꺼짐'}`;
+    const title = document.createElement('strong'); title.textContent = `${s.label}${s.enabled ? '' : ' · off'}`;
     const prompt = document.createElement('p'); prompt.textContent = s.prompt;
     const last = document.createElement('p'); const run = s.runs?.[0];
-    last.textContent = run ? `최근: ${new Date(run.at).toLocaleString('ko-KR')} · ${run.status === 'done' ? run.answer : '실패'}` : (s.next ? `다음: ${new Date(s.next).toLocaleString('ko-KR')}` : '');
+    last.textContent = run ? `Last: ${new Date(run.at).toLocaleString('en-US')} · ${run.status === 'done' ? run.answer : 'failed'}` : (s.next ? `Next: ${new Date(s.next).toLocaleString('en-US')}` : '');
     info.append(title, prompt, last);
-    const toggle = document.createElement('button'); toggle.textContent = s.enabled ? '끄기' : '켜기';
+    const toggle = document.createElement('button'); toggle.textContent = s.enabled ? 'Pause' : 'Resume';
     toggle.onclick = () => api('api/schedules', { method: 'POST', body: JSON.stringify({ ...s, enabled: !s.enabled }) }).then(d => renderSchedules(d.schedules));
-    const remove = document.createElement('button'); remove.textContent = '삭제';
+    const remove = document.createElement('button'); remove.textContent = 'Delete';
     remove.onclick = () => api(`api/schedules?id=${encodeURIComponent(s.id)}`, { method: 'DELETE' }).then(d => renderSchedules(d.schedules));
     row.append(info, toggle, remove); box.append(row);
   }
@@ -187,28 +187,39 @@ $('scheduleForm').addEventListener('submit', event => {
   event.preventDefault();
   const v = $('schedPreset').value, [hh, mm] = ($('schedTime').value || '09:00').split(':').map(Number);
   const cron = v === 'daily' ? `${mm} ${hh} * * *` : v === 'weekday' ? `${mm} ${hh} * * 1-5` : v === 'every' ? `*/${Math.max(5, Number($('schedEvery').value) || 60)} * * * *` : $('schedCron').value.trim();
-  try { Cron.parse(cron); } catch (e) { $('schedNote').textContent = `시간 형식: ${e.message}`; return; }
+  try { Cron.parse(cron); } catch (e) { $('schedNote').textContent = `Time: ${e.message}`; return; }
   api('api/schedules', { method: 'POST', body: JSON.stringify({ prompt: $('schedPrompt').value, cron }) })
-    .then(d => { $('schedPrompt').value = ''; $('schedNote').textContent = '한국 시간 기준입니다. 브라우저를 닫아도 서버에서 실행됩니다.'; renderSchedules(d.schedules); })
+    .then(d => { $('schedPrompt').value = ''; $('schedNote').textContent = 'Korea time. Runs on the server even with this page closed.'; renderSchedules(d.schedules); })
     .catch(e => { $('schedNote').textContent = e.message; });
 });
 
 // ---------- camera: a photo from this device goes into the phone's gallery ----------
+// Re-encode other formats (HEIC, PNG…) as JPEG; <img> decodes some formats createImageBitmap cannot.
+async function toJpeg(file) {
+  let source;
+  try { source = await createImageBitmap(file); }
+  catch {
+    const url = URL.createObjectURL(file);
+    source = await new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => reject(new Error('This image format cannot be read')); img.src = url; }).finally(() => URL.revokeObjectURL(url));
+  }
+  const w = source.width || source.naturalWidth, h = source.height || source.naturalHeight, scale = Math.min(1, 2048 / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+  c.getContext('2d').drawImage(source, 0, 0, c.width, c.height); source.close?.();
+  const blob = await new Promise(resolve => c.toBlob(resolve, 'image/jpeg', 0.9));
+  if (!blob) throw new Error('Could not convert the photo');
+  return blob;
+}
 $('camera').onclick = () => $('cameraInput').click();
 $('cameraInput').onchange = async () => {
   const file = $('cameraInput').files[0]; $('cameraInput').value = '';
   if (!file) return;
-  showConnection('사진을 휴대폰 갤러리에 넣는 중…');
+  showConnection('Adding the photo to the phone\'s Gallery…');
   try {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, 2048 / Math.max(bitmap.width, bitmap.height));
-    const c = document.createElement('canvas'); c.width = Math.round(bitmap.width * scale); c.height = Math.round(bitmap.height * scale);
-    c.getContext('2d').drawImage(bitmap, 0, 0, c.width, c.height); bitmap.close();
-    const jpeg = await new Promise(resolve => c.toBlob(resolve, 'image/jpeg', 0.9));
+    const jpeg = file.type === 'image/jpeg' && file.size < 14 * 1024 * 1024 ? file : await toJpeg(file);
     const res = await fetch('api/photo', { method: 'POST', headers: { 'content-type': 'image/jpeg' }, body: jpeg });
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || '넣지 못했습니다');
-    showConnection('갤러리에 사진을 넣었습니다.'); setTimeout(() => showConnection(''), 1800);
-  } catch (e) { showConnection(`사진: ${e.message}`); setTimeout(() => showConnection(''), 3000); }
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Upload failed');
+    showConnection('Photo added to Gallery.'); setTimeout(() => showConnection(''), 1800);
+  } catch (e) { showConnection(`Photo: ${e.message}`); setTimeout(() => showConnection(''), 3000); }
 };
 
 connect();

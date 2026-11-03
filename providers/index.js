@@ -6,7 +6,7 @@ const openaiCompatible = require('./openai-compatible');
 
 function provider(env = process.env) {
   const name = env.AI_PROVIDER || 'meta';
-  if (name === 'meta') return openaiCompatible({ baseUrl: env.AI_BASE_URL || 'https://api.meta.ai/v1', apiKey: env.MODEL_API_KEY || env.AI_API_KEY, model: env.AI_MODEL || 'muse-spark-1.3' });
+  if (name === 'meta') return openaiCompatible({ baseUrl: env.AI_BASE_URL || 'https://api.meta.ai/v1', apiKey: env.MODEL_API_KEY || env.AI_API_KEY, model: env.AI_MODEL || 'muse-spark-1.3', reasoning: env.AI_REASONING || 'low' });
   if (name === 'gemini') return gemini({ apiKey: env.GEMINI_API_KEY, model: env.AI_MODEL || 'gemini-2.5-flash-lite' });
   if (name === 'openai-compatible') return openaiCompatible({ baseUrl: env.AI_BASE_URL, apiKey: env.AI_API_KEY, model: env.AI_MODEL });
   throw new Error(`Unknown AI_PROVIDER ${name}`);

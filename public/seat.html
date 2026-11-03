@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -11,14 +11,14 @@
   <main class="seat-card">
     <div class="seat-mark" aria-hidden="true"></div>
     <h1>Real Smart Phone</h1>
-    <p class="seat-lead">AI가 함께 쓰는 나만의 클라우드 휴대폰입니다.</p>
+    <p class="seat-lead">Your own Android phone in the cloud, with an AI that can use it for you.</p>
     <form id="seatForm">
-      <label for="seat">받은 번호</label>
-      <input id="seat" name="seat" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="예: 3" required>
-      <button type="submit">내 휴대폰 열기</button>
+      <label for="seat">Your seat number</label>
+      <input id="seat" name="seat" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="e.g. 3" required>
+      <button type="submit">Open my phone</button>
       <p class="seat-error" id="error" role="alert"></p>
     </form>
-    <p class="seat-note">베타 버전입니다. 번호마다 서로 다른 휴대폰이 배정되고, 앱과 사진은 그대로 남습니다. 아이디·비밀번호 로그인은 추후 제공됩니다.</p>
+    <p class="seat-note">Beta: each number is a separate phone, and its apps and photos stay. Sign-in with an account is coming later.</p>
   </main>
   <script>
     document.getElementById('seatForm').addEventListener('submit', async event => {
@@ -27,7 +27,7 @@
       error.textContent = '';
       const res = await fetch('api/seat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ seat: document.getElementById('seat').value.trim() }) }).catch(() => null);
       if (res && res.ok) return location.reload();
-      error.textContent = res ? (await res.json().catch(() => ({}))).error || '번호를 확인해주세요.' : '연결하지 못했습니다. 다시 시도해주세요.';
+      error.textContent = res ? (await res.json().catch(() => ({}))).error || 'Check the number.' : 'Could not connect. Try again.';
     });
   </script>
 </body>

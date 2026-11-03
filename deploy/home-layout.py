@@ -38,8 +38,10 @@ def intent(comp):
             f"launchFlags=0x10200000;package={package};component={comp};end")
 
 
+# Until Chrome is installed from Play, the built-in WebView browser takes its place.
+dock = [p if p != "com.android.chrome" or component(p) else "org.chromium.webview_shell" for p in DOCK]
 rows = []
-for i, package in enumerate(p for p in DOCK if component(p)):
+for i, package in enumerate(p for p in dock if component(p)):
     rows.append((component(package), -101, i, i, 0))
 placed = [p for p in HOME if component(p)]
 for i, package in enumerate(placed):

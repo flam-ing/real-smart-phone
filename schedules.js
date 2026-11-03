@@ -16,12 +16,12 @@ function createSchedules({ dataDir, runAgent }) {
   function upsert(n, body) {
     const prompt = String(body.prompt || '').trim().slice(0, 2000);
     const cron = String(body.cron || '').trim();
-    if (!prompt) throw Object.assign(new Error('할 일을 적어주세요'), { status: 400 });
-    try { Cron.parse(cron); } catch (e) { throw Object.assign(new Error(`시간 형식이 맞지 않습니다: ${e.message}`), { status: 400 }); }
+    if (!prompt) throw Object.assign(new Error('Describe the task'), { status: 400 });
+    try { Cron.parse(cron); } catch (e) { throw Object.assign(new Error(`Invalid time: ${e.message}`), { status: 400 }); }
     const items = load(n);
     const existing = items.find(s => s.id === body.id);
     if (existing) Object.assign(existing, { prompt, cron, enabled: body.enabled !== false });
-    else { if (items.length >= 20) throw Object.assign(new Error('스케줄은 20개까지입니다'), { status: 400 }); items.push({ id: crypto.randomUUID(), prompt, cron, enabled: body.enabled !== false, runs: [] }); }
+    else { if (items.length >= 20) throw Object.assign(new Error('Up to 20 schedules'), { status: 400 }); items.push({ id: crypto.randomUUID(), prompt, cron, enabled: body.enabled !== false, runs: [] }); }
     save(n, items); return list(n);
   }
   function remove(n, id) { save(n, load(n).filter(s => s.id !== id)); return list(n); }

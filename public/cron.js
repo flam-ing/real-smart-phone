@@ -21,7 +21,7 @@
   }
   function parse(expr) {
     const f = String(expr || '').trim().split(/\s+/);
-    if (f.length !== 5) throw new Error('5칸(분 시 일 월 요일)이어야 합니다');
+    if (f.length !== 5) throw new Error('needs 5 fields (minute hour day month weekday)');
     const s = f.map((x, i) => field(x, ...RANGES[i]));
     if (s[4].has(7)) s[4].add(0);
     return { mi: s[0], ho: s[1], dom: s[2], mon: s[3], dow: s[4], domAny: f[2].startsWith('*'), dowAny: f[4].startsWith('*') };
@@ -45,10 +45,10 @@
     const [mi, ho, dom, mon, dow] = f;
     const at = /^\d+$/.test(mi) && /^\d+$/.test(ho) ? `${pad(ho)}:${pad(mi)}` : '';
     if (mon === '*' && dom === '*') {
-      if (at && dow === '*') return `매일 ${at}`;
-      if (at && dow === '1-5') return `평일 ${at}`;
-      if (at && (dow === '0,6' || dow === '6,0')) return `주말 ${at}`;
-      if (/^\*\/\d+$/.test(mi) && ho === '*' && dow === '*') return `${mi.slice(2)}분마다`;
+      if (at && dow === '*') return `Every day ${at}`;
+      if (at && dow === '1-5') return `Weekdays ${at}`;
+      if (at && (dow === '0,6' || dow === '6,0')) return `Weekends ${at}`;
+      if (/^\*\/\d+$/.test(mi) && ho === '*' && dow === '*') return `Every ${mi.slice(2)} min`;
     }
     return expr;
   }

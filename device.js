@@ -164,6 +164,8 @@ class Device {
     try {
       await seats.adb(this.serial, ['push', temp, `/sdcard/DCIM/Camera/${name}`], 30000);
       await this.shell(['am', 'broadcast', '-a', 'android.intent.action.MEDIA_SCANNER_SCAN_FILE', '-d', `file:///sdcard/DCIM/Camera/${name}`]);
+      // Open the Gallery so the viewer sees the photo arrive.
+      await this.launch('com.android.gallery3d').catch(() => {});
     } finally { require('fs').rmSync(temp, { force: true }); }
     return name;
   }
