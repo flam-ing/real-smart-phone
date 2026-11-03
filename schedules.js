@@ -37,7 +37,7 @@ function createSchedules({ dataDir, runAgent }) {
         let due = false; try { due = Cron.matches(Cron.parse(s.cron), now); } catch {}
         if (!due) continue;
         const started = Date.now();
-        runAgent(n, s.prompt, { source: 'schedule' }).then(answer => record(n, s.id, started, 'done', answer), error => record(n, s.id, started, 'failed', error.message));
+        runAgent(n, s.prompt, { source: 'schedule' }).then(answer => record(n, s.id, started, 'done', answer), error => record(n, s.id, started, error.code === 'ai_busy' ? 'skipped' : 'failed', error.message));
       }
     }
   }

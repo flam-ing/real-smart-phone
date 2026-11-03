@@ -39,6 +39,7 @@ function connect() {
     else if (msg.type === 'chat_history') renderMessages(msg.messages);
     else if (msg.type === 'chat') addMessage(msg.message);
     else if (msg.type === 'ai') setAi(msg);
+    else if (msg.type === 'schedules') renderSchedules(msg.schedules || []);
 
   };
   socket.onclose = () => {
@@ -185,7 +186,7 @@ function renderSchedules(list) {
     const title = document.createElement('strong'); title.textContent = `${s.label}${s.enabled ? '' : ' · off'}`;
     const prompt = document.createElement('p'); prompt.textContent = s.prompt;
     const last = document.createElement('p'); const run = s.runs?.[0];
-    last.textContent = run ? `Last: ${new Date(run.at).toLocaleString('en-US')} · ${run.status === 'done' ? run.answer : 'failed'}` : (s.next ? `Next: ${new Date(s.next).toLocaleString('en-US')}` : '');
+    last.textContent = run ? `Last: ${new Date(run.at).toLocaleString('en-US')} · ${run.status === 'done' ? run.answer : run.status === 'skipped' ? 'skipped (AI was still busy)' : 'failed'}` : (s.next ? `Next: ${new Date(s.next).toLocaleString('en-US')}` : '');
     info.append(title, prompt, last);
     const toggle = document.createElement('button'); toggle.textContent = s.enabled ? 'Pause' : 'Resume';
     toggle.onclick = () => api('api/schedules', { method: 'POST', body: JSON.stringify({ ...s, enabled: !s.enabled }) }).then(d => renderSchedules(d.schedules));

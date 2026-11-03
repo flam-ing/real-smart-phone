@@ -21,7 +21,7 @@ const PUBLIC = path.join(__dirname, 'public');
 const COOKIE = 'rsp_invite';
 const IDLE_SLEEP_MS = Number(env.IDLE_SLEEP_MIN || 30) * 60000;
 
-const agents = createAgents({ dataDir: DATA, deviceFor, ensureSeat: n => deviceFor(n).ensure() });
+const agents = createAgents({ dataDir: DATA, deviceFor, ensureSeat: n => deviceFor(n).ensure(), addSchedule: (n, body) => schedules.upsert(n, body) });
 const schedules = createSchedules({ dataDir: DATA, runAgent: (n, prompt, options) => agents.run(n, prompt, options) });
 setInterval(() => schedules.tick(seats.SEAT_COUNT).catch?.(() => {}), 15000).unref();
 const notifications = createNotifications({ dataDir: DATA });
