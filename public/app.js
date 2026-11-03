@@ -220,4 +220,39 @@ $('scheduleForm').addEventListener('submit', event => {
     .catch(e => { $('schedNote').textContent = e.message; });
 });
 
+// ---------- notifications: the phone's Android notifications arrive as push notifications ----------
+const bell = $('bell'), pushNote = $('pushNote');
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent);
+function note(text) { pushNote.textContent = text; pushNote.hidden = !text; }
+const fromBase64Url = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0));
+async function pushState() {
+  if (!('serviceWorker' in navigator)) return;
+  const reg = await navigator.serviceWorker.register('sw.js');
+  const sub = await reg.pushManager?.getSubscription();
+  bell.setAttribute('aria-pressed', String(Boolean(sub)));
+  return reg;
+}
+bell.onclick = async () => {
+  try {
+    if (isIos && !standalone) return note('On iPhone: tap Share, then Add to Home Screen. Open Real Smart Phone from the home screen and tap the bell again.');
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return note('This browser cannot receive notifications.');
+    const reg = await pushState();
+    const current = await reg.pushManager.getSubscription();
+    if (current) {
+      await api('api/push', { method: 'DELETE', body: JSON.stringify({ endpoint: current.endpoint }) });
+      await current.unsubscribe();
+      bell.setAttribute('aria-pressed', 'false');
+      return note('Notifications are off.');
+    }
+    if (await Notification.requestPermission() !== 'granted') return note('Notifications are blocked. Allow them in your browser settings.');
+    const { publicKey } = await api('api/push');
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromBase64Url(publicKey) });
+    await api('api/push', { method: 'POST', body: JSON.stringify({ subscription: sub.toJSON() }) });
+    bell.setAttribute('aria-pressed', 'true');
+    note('Notifications are on. New notifications on your phone (KakaoTalk, WhatsApp, Instagram…) will appear here, and the phone stays on to receive them.');
+  } catch (e) { note(`Notifications: ${e.message}`); }
+};
+pushState().catch(() => {});
+
 connect();

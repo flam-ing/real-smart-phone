@@ -1,6 +1,6 @@
 'use strict';
 // Real Smart Phone: each seat number gets its own Android phone in the cloud, with an AI that can operate it.
-// Beta: a seat is chosen by number only; accounts come later.
+// Closed beta: an invite link carries a signed token naming the tester's phone; accounts come later.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -9,6 +9,8 @@ const seats = require('./seats');
 const { deviceFor } = require('./device');
 const { createAgents } = require('./agent');
 const { createSchedules } = require('./schedules');
+const { createNotifications } = require('./notifications');
+const { createInvites } = require('./invites');
 
 const env = process.env;
 const PORT = Number(env.PORT || 18100);
@@ -16,12 +18,14 @@ const BASE = (env.BASE_PATH || '').replace(/\/+$/, '');
 const DATA = env.APP_DATA || path.join(__dirname, 'data');
 const ORIGINS = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
 const PUBLIC = path.join(__dirname, 'public');
-const COOKIE = 'cp_seat';
+const COOKIE = 'rsp_invite';
 const IDLE_SLEEP_MS = Number(env.IDLE_SLEEP_MIN || 30) * 60000;
 
 const agents = createAgents({ dataDir: DATA, deviceFor, ensureSeat: n => deviceFor(n).ensure() });
 const schedules = createSchedules({ dataDir: DATA, runAgent: (n, prompt, options) => agents.run(n, prompt, options) });
 setInterval(() => schedules.tick(seats.SEAT_COUNT).catch?.(() => {}), 15000).unref();
+const notifications = createNotifications({ dataDir: DATA });
+const invites = createInvites({ dataDir: DATA });
 
 // Sleep seats nobody has watched or used for a while, so others can wake theirs.
 const lastUsed = new Map();
@@ -29,14 +33,15 @@ const touchSeat = n => lastUsed.set(n, Date.now());
 setInterval(async () => {
   for (let n = 1; n <= seats.SEAT_COUNT; n++) {
     const device = deviceFor(n);
-    if (device.inUse() || agents.isRunning(n)) { touchSeat(n); continue; }
+    // A phone whose owner wants its notifications stays on (within MAX_RUNNING).
+    if (device.inUse() || agents.isRunning(n) || notifications.hasSubscribers(n)) { touchSeat(n); continue; }
     if (Date.now() - (lastUsed.get(n) || 0) > IDLE_SLEEP_MS && await seats.isRunning(n)) seats.sleepSeat(n);
   }
 }, 60000).unref();
 
 function seatFromCookie(req) {
-  const match = /(?:^|;\s*)cp_seat=(\d+)/.exec(req.headers.cookie || '');
-  return match ? seats.seatNumber(match[1]) : null;
+  const match = /(?:^|;\s*)rsp_invite=([\w.-]+)/.exec(req.headers.cookie || '');
+  return match ? seats.seatNumber(invites.verify(match[1])?.seat) : null;
 }
 function send(res, status, body, headers = {}) {
   const data = typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body);
@@ -52,11 +57,11 @@ function readBody(req, limit) {
   });
 }
 const readJson = async req => { try { return JSON.parse((await readBody(req, 64 * 1024)).toString('utf8') || '{}'); } catch (e) { throw Object.assign(new Error('invalid request'), { status: e.status || 400 }); } };
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/manifest+json' };
-function serveFile(res, file) {
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/manifest+json', '.webmanifest': 'application/manifest+json' };
+function serveFile(res, file, status = 200) {
   const full = path.join(PUBLIC, file);
   if (!full.startsWith(PUBLIC + path.sep) || !fs.existsSync(full) || fs.statSync(full).isDirectory()) return send(res, 404, 'Not found');
-  res.writeHead(200, { 'content-type': TYPES[path.extname(full)] || 'application/octet-stream', 'cache-control': 'no-cache' });
+  res.writeHead(status, { 'content-type': TYPES[path.extname(full)] || 'application/octet-stream', 'cache-control': 'no-cache' });
   fs.createReadStream(full).pipe(res);
 }
 function sameOrigin(req) {
@@ -77,13 +82,13 @@ async function handle(req, res) {
   if (req.method !== 'GET' && !sameOrigin(req)) return send(res, 403, { error: 'origin' });
   const seat = seatFromCookie(req);
 
-  if (req.method === 'GET' && route === '/') return serveFile(res, seat ? 'phone.html' : 'seat.html');
-  if (req.method === 'POST' && route === '/api/seat') {
-    const n = seats.seatNumber((await readJson(req)).seat);
-    if (!n) return send(res, 400, { error: `Enter a number from 1 to ${seats.SEAT_COUNT}.` });
-    return send(res, 200, { seat: n }, { 'set-cookie': `${COOKIE}=${n}; Path=${BASE || '/'}; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax` });
+  // An invite link (?t=<token>) becomes a cookie, and the token leaves the address bar.
+  if (req.method === 'GET' && route === '/' && url.searchParams.has('t')) {
+    const token = url.searchParams.get('t');
+    if (!seats.seatNumber(invites.verify(token)?.seat)) return serveFile(res, 'closed.html', 403);
+    return send(res, 302, '', { location: `${BASE}/`, 'set-cookie': `${COOKIE}=${token}; Path=${BASE || '/'}; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax` });
   }
-  if (req.method === 'POST' && route === '/api/leave') return send(res, 200, { ok: true }, { 'set-cookie': `${COOKIE}=; Path=${BASE || '/'}; Max-Age=0; HttpOnly; Secure; SameSite=Lax` });
+  if (req.method === 'GET' && route === '/') return serveFile(res, seat ? 'phone.html' : 'closed.html');
   if (route.startsWith('/api/')) {
     if (!seat) return send(res, 401, { error: 'seat' });
     touchSeat(seat);
@@ -92,6 +97,9 @@ async function handle(req, res) {
       deviceFor(seat).ensure().catch(() => {});
       return send(res, 202, await seatStatus(seat));
     }
+    if (req.method === 'GET' && route === '/api/push') return send(res, 200, { publicKey: notifications.publicKey, subscribed: notifications.hasSubscribers(seat) });
+    if (req.method === 'POST' && route === '/api/push') { notifications.subscribe(seat, (await readJson(req)).subscription); deviceFor(seat).ensure().catch(() => {}); return send(res, 200, { ok: true }); }
+    if (req.method === 'DELETE' && route === '/api/push') { notifications.unsubscribe(seat, (await readJson(req)).endpoint); return send(res, 200, { ok: true }); }
     if (req.method === 'GET' && route === '/api/usage') return send(res, 200, agents.usage());
     if (req.method === 'GET' && route === '/api/chat') return send(res, 200, { messages: agents.history(seat) });
     if (req.method === 'POST' && route === '/api/ai/stop') { agents.stop(seat); return send(res, 200, { ok: true }); }
