@@ -98,14 +98,6 @@ async function handle(req, res) {
     if (req.method === 'GET' && route === '/api/schedules') return send(res, 200, { schedules: schedules.list(seat) });
     if (req.method === 'POST' && route === '/api/schedules') return send(res, 200, { schedules: schedules.upsert(seat, await readJson(req)) });
     if (req.method === 'DELETE' && route === '/api/schedules') return send(res, 200, { schedules: schedules.remove(seat, url.searchParams.get('id')) });
-    if (req.method === 'POST' && route === '/api/photo') {
-      if (!/^image\/jpeg$/.test(req.headers['content-type'] || '')) return send(res, 415, { error: 'Only JPEG photos are supported.' });
-      const body = await readBody(req, 15 * 1024 * 1024);
-      if (body[0] !== 0xff || body[1] !== 0xd8) return send(res, 415, { error: 'Only JPEG photos are supported.' });
-      const device = deviceFor(seat);
-      await device.ensure();
-      return send(res, 200, { name: await device.addPhoto(body) });
-    }
     return send(res, 404, { error: 'not found' });
   }
   if (req.method === 'GET') return serveFile(res, route.replace(/^\/+/, ''));
@@ -130,11 +122,12 @@ function connect(ws, n) {
   ws.send(JSON.stringify({ type: 'chat_history', messages: agents.history(n) }));
   ws.send(JSON.stringify({ type: 'ai', running: agents.isRunning(n) }));
   state();
-  device.ensure().then(() => { state(); if (device.latestFrame && ws.readyState === WebSocket.OPEN) ws.send(device.latestFrame, { binary: true }); }, () => state());
+  device.ensure().then(() => { state(); device.onTouch(); if (device.latestFrame && ws.readyState === WebSocket.OPEN) ws.send(device.latestFrame, { binary: true }); }, () => state());
   const timer = setInterval(state, 5000);
   ws.on('message', raw => {
     let msg; try { msg = JSON.parse(raw.toString()); } catch { return; }
     touchSeat(n);
+    if (['pointer_up', 'tap', 'swipe', 'key'].includes(msg.type)) device.onTouch();
     const clamp = (v, hi) => Math.max(0, Math.min(hi, Math.round(Number(v) || 0)));
     switch (msg.type) {
       case 'frame_ack_hello': return device.credit.enable(ws);

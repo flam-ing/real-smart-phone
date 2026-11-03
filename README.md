@@ -3,10 +3,9 @@
 Each seat number opens its own Android phone in the cloud. An AI can operate the phone for you, now or on a schedule.
 
 - **Seats.** Beta: enter the number you were given. Each number is a separate Android 12 phone (redroid) with its own storage. Apps and photos stay while the phone sleeps. Accounts come later.
-- **Live control.** H.264 from the phone (scrcpy), JPEG frames to the browser with frame acknowledgements, touches streamed as they happen.
+- **Live control.** H.264 from the phone (scrcpy), JPEG frames to the browser with frame acknowledgements, touches streamed as they happen. Tap a text field and your own keyboard types into the phone, Korean included.
 - **AI.** The AI looks at the screen and taps, swipes, types (Korean included) and opens apps until the task is done. A blue frame shows while it is in control. Stop it at any time.
 - **Schedules.** Run a saved request every weekday at 09:00, every 30 minutes, or any cron time. Runs on the server with the browser closed.
-- **Camera.** Take a photo with your own device and it lands in the phone's gallery.
 
 ## Run
 

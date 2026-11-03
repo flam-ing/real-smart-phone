@@ -135,11 +135,20 @@ class Device {
     return fresh || this.latestFrame;
   }
 
+  async dumpUi() {
+    // uiautomator runs one dump at a time; the AI and the keyboard watcher share this chain.
+    const run = (this.dumpChain || Promise.resolve()).catch(() => {}).then(async () => {
+      await this.shell(['uiautomator', 'dump', '--compressed', '/data/local/tmp/real-smart-phone-ui.xml'], 15000);
+      return this.shell(['cat', '/data/local/tmp/real-smart-phone-ui.xml'], 8000);
+    });
+    this.dumpChain = run;
+    return run;
+  }
+
   /** Visible UI elements with text, for the AI to aim taps. */
   async uiNodes() {
     try {
-      await this.shell(['uiautomator', 'dump', '--compressed', '/data/local/tmp/real-smart-phone-ui.xml'], 15000);
-      const xml = await this.shell(['cat', '/data/local/tmp/real-smart-phone-ui.xml'], 8000);
+      const xml = await this.dumpUi();
       const nodes = [];
       for (const m of xml.matchAll(/<node ([^>]*?)\/?>/g)) {
         const attr = name => (new RegExp(`${name}="([^"]*)"`).exec(m[1]) || [])[1] || '';
@@ -156,18 +165,37 @@ class Device {
     } catch { return []; }
   }
 
-  /** A photo from the viewer's real camera goes into Android's gallery. */
-  async addPhoto(buffer) {
-    const name = `IMG_${new Date().toISOString().replace(/\D/g, '').slice(0, 14)}.jpg`;
-    const temp = require('path').join(require('os').tmpdir(), `real-smart-phone-${this.n}-${name}`);
-    require('fs').writeFileSync(temp, buffer, { mode: 0o600 });
+  // ---------- the viewer's own keyboard ----------
+  // A page can raise the iPhone keyboard only inside a touch, so it gets the text-field areas ahead of time,
+  // plus whether Android currently wants a keyboard (to hide it again, or offer a tap-to-type hint).
+  onTouch() {
+    this.imeUntil = Date.now() + 6000;
+    if (!this.imeTimer) this.imeTimer = setTimeout(() => this.pollIme(), 300);
+    clearTimeout(this.fieldsTimer);
+    this.fieldsTimer = setTimeout(() => this.sendFields(), 900);
+  }
+  async pollIme() {
+    this.imeTimer = null;
+    if (!this.clients.size) return;
     try {
-      await seats.adb(this.serial, ['push', temp, `/sdcard/DCIM/Camera/${name}`], 30000);
-      await this.shell(['am', 'broadcast', '-a', 'android.intent.action.MEDIA_SCANNER_SCAN_FILE', '-d', `file:///sdcard/DCIM/Camera/${name}`]);
-      // Open the Gallery so the viewer sees the photo arrive.
-      await this.launch('com.android.gallery3d').catch(() => {});
-    } finally { require('fs').rmSync(temp, { force: true }); }
-    return name;
+      const shown = /mInputShown=true/.test(await this.shell(['dumpsys', 'input_method'], 5000));
+      if (shown !== this.imeShown) { this.imeShown = shown; this.sendJson({ type: 'ime', shown }); }
+    } catch {}
+    if (Date.now() < this.imeUntil) this.imeTimer = setTimeout(() => this.pollIme(), 600);
+  }
+  async sendFields() {
+    if (!this.clients.size) return;
+    try {
+      const xml = await this.dumpUi();
+      const fields = [];
+      for (const m of xml.matchAll(/<node ([^>]*?)\/?>/g)) {
+        if (!/class="android\.widget\.(EditText|AutoCompleteTextView|MultiAutoCompleteTextView)"/.test(m[1])) continue;
+        const b = /bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/.exec(m[1]);
+        if (b) { const [x1, y1, x2, y2] = b.slice(1).map(Number); if (x2 > x1 && y2 > y1) fields.push([x1, y1, x2, y2]); }
+        if (fields.length >= 30) break;
+      }
+      this.sendJson({ type: 'fields', fields });
+    } catch {}
   }
 
   inUse() { return this.clients.size > 0 || this.holds > 0; }
