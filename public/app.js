@@ -39,6 +39,7 @@ function connect() {
     else if (msg.type === 'chat_history') renderMessages(msg.messages);
     else if (msg.type === 'chat') addMessage(msg.message);
     else if (msg.type === 'ai') setAi(msg);
+    else if (msg.type === 'ai_target') showTarget(msg);
     else if (msg.type === 'schedules') renderSchedules(msg.schedules || []);
 
   };
@@ -131,11 +132,23 @@ canvas.addEventListener('pointerup', event => { if (event.pointerType === 'mouse
 
 // ---------- AI ----------
 function setAi(state) {
-  phone.classList.toggle('ai-on', !!state.running);
+  // While waiting for the user, the blue frame goes away: the phone is in the user's hands.
+  phone.classList.toggle('ai-on', !!state.running && !state.waiting);
   $('aiBadge').hidden = !state.running;
-  if (state.running) $('aiText').textContent = state.text ? `AI · ${state.text}` : 'AI is using the phone';
+  $('aiBadge').classList.toggle('waiting', !!state.waiting);
+  $('aiResume').hidden = !state.waiting;
+  if (state.running) $('aiText').textContent = state.waiting ? `Your turn: ${state.text}` : state.text ? `AI · ${state.text}` : 'AI is using the phone';
 }
 $('aiStop').onclick = () => sendJson({ type: 'ai_stop' });
+$('aiResume').onclick = () => sendJson({ type: 'ai_resume' });
+let targetTimer = null;
+function showTarget({ box, label }) {
+  const el = $('aiTarget');
+  if (!box) return;
+  Object.assign(el.style, { left: `${box.x1 / W * 100}%`, top: `${box.y1 / H * 100}%`, width: `${(box.x2 - box.x1) / W * 100}%`, height: `${(box.y2 - box.y1) / H * 100}%` });
+  $('aiTargetLabel').textContent = `SAM 3.1 · ${label}`;
+  el.hidden = false; clearTimeout(targetTimer); targetTimer = setTimeout(() => { el.hidden = true; }, 1600);
+}
 function messageNode(m) {
   const node = document.createElement('div');
   node.className = `msg ${m.role === 'user' ? 'user' : ''} ${m.error ? 'error' : ''}`;

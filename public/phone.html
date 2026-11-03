@@ -19,7 +19,8 @@
       <section class="phone" id="phone" aria-label="Cloud phone">
         <canvas id="screen" width="720" height="1560" aria-label="Phone screen. Touch to control it."></canvas>
         <div class="ai-ring" aria-hidden="true"></div>
-        <div class="ai-badge" id="aiBadge" hidden><span class="dot"></span><span id="aiText">AI is using the phone</span><button type="button" id="aiStop">Stop</button></div>
+        <div class="ai-badge" id="aiBadge" hidden><span class="dot"></span><span id="aiText">AI is using the phone</span><button type="button" id="aiResume" hidden>Continue</button><button type="button" id="aiStop">Stop</button></div>
+        <div class="ai-target" id="aiTarget" hidden><span id="aiTargetLabel"></span></div>
         <div class="connection" id="connection" role="status">Connecting to your phone…</div>
         <div class="shade" id="shade" aria-hidden="true"></div>
         <aside class="drawer" id="drawer" role="dialog" aria-label="AI" aria-hidden="true" inert>

@@ -4,7 +4,9 @@ Each seat number opens its own Android phone in the cloud. An AI can operate the
 
 - **Closed beta.** An invite link opens your phone directly. Each invite names a separate Android 12 phone (redroid) with its own storage; apps and photos stay while it sleeps. Accounts come later.
 - **Live control.** H.264 from the phone (scrcpy), JPEG frames to the browser with frame acknowledgements, touches streamed as they happen. Type on a computer keyboard straight into the phone (Korean included), or use the phone's own keyboard.
-- **AI.** The AI looks at the screen and taps, swipes, types (Korean included) and opens apps until the task is done. A blue frame shows while it is in control. Stop it at any time.
+- **AI.** Muse Spark looks at the screen and taps, swipes, types (Korean included) and opens apps until the task is done. When an element has no accessibility label (web views, images, games), SAM 3.1 finds it from a short description and the box is shown before the tap. A blue frame shows while the AI is in control; stop it at any time.
+- **Hand-over.** For sign-ins, codes, CAPTCHAs, or confirming a send, post or payment, the AI stops and asks you to take over, then continues when you tap Continue. Scheduled runs ask through a push notification.
+- **Schedules from chat.** "Every morning at 9…" or "every 10 minutes…" in the AI chat becomes a schedule.
 - **Notifications.** Turn on the bell in the AI sheet and the phone's Android notifications (KakaoTalk, WhatsApp, Instagram…) arrive as push notifications, also on iPhone when added to the home screen.
 - **Schedules.** Run a saved request every weekday at 09:00, every 30 minutes, or any cron time. Runs on the server with the browser closed.
 

@@ -21,7 +21,7 @@ const PUBLIC = path.join(__dirname, 'public');
 const COOKIE = 'rsp_invite';
 const IDLE_SLEEP_MS = Number(env.IDLE_SLEEP_MIN || 30) * 60000;
 
-const agents = createAgents({ dataDir: DATA, deviceFor, ensureSeat: n => deviceFor(n).ensure(), addSchedule: (n, body) => schedules.upsert(n, body) });
+const agents = createAgents({ dataDir: DATA, deviceFor, ensureSeat: n => deviceFor(n).ensure(), addSchedule: (n, body) => schedules.upsert(n, body), notify: (n, payload) => notifications.push(n, payload) });
 const schedules = createSchedules({ dataDir: DATA, runAgent: (n, prompt, options) => agents.run(n, prompt, options) });
 setInterval(() => schedules.tick(seats.SEAT_COUNT).catch?.(() => {}), 15000).unref();
 const notifications = createNotifications({ dataDir: DATA });
@@ -153,6 +153,7 @@ function connect(ws, n) {
         return;
       }
       case 'ai_stop': return agents.stop(n);
+      case 'ai_resume': return agents.resume(n);
     }
   });
   ws.on('close', () => { clearInterval(timer); device.removeClient(ws); });
