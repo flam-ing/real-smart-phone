@@ -13,7 +13,7 @@ DOCK = ["com.android.chrome", "com.android.camera2", "com.android.vending", "com
 HOME = [
     "com.facebook.katana", "com.instagram.android", "com.instagram.barcelona", "com.whatsapp",
     "com.kakao.talk", "com.towneers.www", "viva.republica.toss", "com.google.android.youtube",
-    "com.android.gallery3d", "com.android.contacts", "com.android.settings",
+    "com.google.android.apps.photos", "com.android.gallery3d", "com.android.contacts", "com.android.settings",
 ]
 COLUMNS = 4
 
