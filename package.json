@@ -1,0 +1,10 @@
+{
+  "name": "cloud-phone",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A personal Android phone in the cloud per seat, with an AI that can operate it.",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node --test test/" },
+  "engines": { "node": ">=20" },
+  "dependencies": { "ws": "^8.22.0" }
+}

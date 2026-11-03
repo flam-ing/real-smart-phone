@@ -1,0 +1,18 @@
+[Unit]
+Description=Cloud Phone (per-seat Android with AI)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/cloud-phone
+EnvironmentFile=/etc/cloud-phone.env
+Environment=TZ=Asia/Seoul
+ExecStartPre=/usr/local/bin/init-android-binder.sh
+ExecStart=/usr/bin/node /opt/cloud-phone/server.js
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

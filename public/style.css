@@ -1,0 +1,84 @@
+:root {
+  --bg: #0b0d10; --nav: #121519; --nav-text: #dfe2e8; --nav-hover: #2a2f36;
+  --sheet: rgba(249,250,252,.98); --sheet-line: #e4e7ea; --text: #17191c; --muted: #6a717c;
+  --bubble: #ebeef3; --mine: #0866ff; --meta: #0866ff; --meta-2: #00c6ff; --danger: #d93025;
+}
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; }
+body { overflow: hidden; touch-action: manipulation; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", sans-serif; }
+button, input, select { font: inherit; }
+
+/* Seat entry */
+.seat-page { display: flex; align-items: center; justify-content: center; padding: 16px; color: #f2f4f7; }
+.seat-card { width: min(360px, 100%); display: flex; flex-direction: column; gap: 14px; }
+.seat-mark { width: 52px; height: 52px; border-radius: 16px; background: linear-gradient(135deg, var(--meta), var(--meta-2)); }
+.seat-card h1 { margin: 0; font-size: 26px; }
+.seat-lead { margin: 0; color: #b9c0ca; }
+.seat-card form { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.seat-card label { font-size: 13px; color: #b9c0ca; }
+.seat-card input { font-size: 22px; padding: 12px 14px; border-radius: 12px; border: 1px solid #2b3038; background: #15191e; color: #fff; }
+.seat-card button { font-size: 16px; font-weight: 650; padding: 13px; border: 0; border-radius: 12px; background: var(--meta); color: #fff; cursor: pointer; }
+.seat-error { min-height: 1.2em; margin: 0; color: #ff7b72; font-size: 13px; }
+.seat-note { margin: 6px 0 0; font-size: 12px; line-height: 1.6; color: #8a929d; }
+
+/* Phone */
+.app { height: 100dvh; width: 100%; display: flex; flex-direction: column; align-items: center; }
+.view { flex: 1 1 auto; min-height: 0; width: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+.phone { height: min(100%, 216.6667vw); max-height: 100%; width: auto; max-width: 100%; aspect-ratio: 720 / 1560; position: relative; overflow: hidden; background: #08090a; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; }
+.connection { position: absolute; z-index: 3; top: 12px; left: 50%; transform: translateX(-50%); padding: 7px 12px; border-radius: 20px; background: rgba(24,27,32,.88); color: #fff; font-size: 12px; white-space: nowrap; pointer-events: none; }
+.connection[hidden] { display: none; }
+.phone.ai-on .connection { top: 52px; }
+
+/* AI is operating: Meta-blue glowing frame and a status pill */
+.ai-ring { position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: 4px; opacity: 0; transition: opacity .3s; box-shadow: inset 0 0 0 3px var(--meta), inset 0 0 26px 6px rgba(8,102,255,.55); }
+.phone.ai-on .ai-ring { opacity: 1; animation: ai-pulse 1.6s ease-in-out infinite; }
+@keyframes ai-pulse { 50% { box-shadow: inset 0 0 0 3px var(--meta-2), inset 0 0 38px 10px rgba(0,198,255,.45); } }
+.ai-badge { position: absolute; z-index: 3; top: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; max-width: 92%; padding: 6px 6px 6px 12px; border-radius: 20px; background: rgba(8,102,255,.94); color: #fff; font-size: 12px; box-shadow: 0 6px 20px rgba(8,102,255,.35); }
+.ai-badge[hidden] { display: none; }
+.ai-badge #aiText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-badge .dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #fff; animation: ai-blink 1s infinite; }
+@keyframes ai-blink { 50% { opacity: .3; } }
+.ai-badge button { flex: none; border: 0; border-radius: 14px; padding: 4px 10px; background: rgba(255,255,255,.22); color: #fff; font-size: 12px; cursor: pointer; }
+
+.nav { touch-action: manipulation; flex: 0 0 auto; min-height: 62px; width: min(100%, 520px); display: flex; align-items: center; justify-content: space-around; gap: 3px; padding: 5px 10px max(7px, env(safe-area-inset-bottom, 0px)); background: var(--nav); color: var(--nav-text); }
+.nav button { appearance: none; background: none; border: 0; border-radius: 12px; color: inherit; min-width: 50px; height: 45px; cursor: pointer; display: grid; place-items: center; padding: 4px 9px; }
+.nav button:hover, .nav button:focus-visible { background: var(--nav-hover); outline: none; }
+.nav .symbol { font-size: 17px; line-height: 1; }
+.nav .ai { background: linear-gradient(135deg, var(--meta), var(--meta-2)); color: #fff; font-size: 14px; font-weight: 750; }
+
+.shade { position: absolute; inset: 0; z-index: 4; background: rgba(12,15,20,.25); opacity: 0; visibility: hidden; transition: opacity .24s, visibility .24s; }
+.phone.open .shade { opacity: 1; visibility: visible; }
+.drawer { touch-action: manipulation; position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; height: min(66%, 520px); min-height: 260px; display: flex; flex-direction: column; border-radius: 20px 20px 0 0; background: var(--sheet); box-shadow: 0 -12px 38px #17212d33; transform: translateY(103%); transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility .28s; visibility: hidden; }
+.phone.open .drawer { transform: translateY(0); visibility: visible; }
+.handle { width: 34px; height: 4px; border-radius: 99px; background: #c2c6ce; margin: 10px auto 4px; }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px 10px; border-bottom: 1px solid var(--sheet-line); }
+.tabs { display: flex; gap: 4px; }
+.tabs button { border: 0; background: none; padding: 6px 10px; border-radius: 10px; font-size: 15px; font-weight: 650; color: var(--muted); cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--text); background: #eceef1; }
+.close { appearance: none; border: 0; background: #eceef1; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; color: #606872; font-size: 20px; line-height: 1; }
+.pane { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.pane[hidden] { display: none; }
+.messages { overflow: auto; flex: 1; padding: 14px; display: flex; flex-direction: column; gap: 9px; font-size: 13px; }
+.msg { max-width: 86%; width: fit-content; padding: 9px 12px; border-radius: 15px; background: var(--bubble); color: #2d333c; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.msg.user { align-self: flex-end; background: var(--mine); color: #fff; }
+.msg.error { background: #fdecea; color: #8a1c13; }
+.msg small { display: block; color: var(--muted); font-size: 11px; margin-bottom: 2px; }
+.empty { color: var(--muted); font-size: 13px; line-height: 1.6; }
+.compose { display: flex; gap: 8px; align-items: center; border-top: 1px solid #e5e7eb; padding: 10px 12px 14px; }
+.compose input { flex: 1; min-width: 0; height: 40px; border: 1px solid #dedfe5; border-radius: 20px; background: #f2f3f5; padding: 0 14px; font-size: 14px; color: var(--text); }
+.compose button { width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--meta); color: #fff; font-size: 19px; cursor: pointer; }
+.schedules { overflow: auto; flex: 1; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+.sched { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--sheet-line); border-radius: 12px; background: #fff; }
+.sched div { flex: 1; min-width: 0; }
+.sched strong { display: block; font-size: 13px; }
+.sched p { margin: 3px 0 0; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.sched button { border: 0; background: #eceef1; border-radius: 8px; padding: 5px 8px; font-size: 12px; cursor: pointer; }
+.schedule-form { border-top: 1px solid #e5e7eb; padding: 10px 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.schedule-form input, .schedule-form select { height: 38px; border: 1px solid #dedfe5; border-radius: 10px; background: #f6f7f9; padding: 0 10px; font-size: 14px; min-width: 0; }
+.schedule-row { display: flex; gap: 6px; }
+.schedule-row input { flex: 1; }
+.schedule-row input[hidden] { display: none; }
+.schedule-row button { border: 0; border-radius: 10px; padding: 0 14px; background: var(--meta); color: #fff; font-weight: 650; cursor: pointer; }
+.schedule-note { margin: 0; font-size: 11px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .drawer, .shade { transition: none; } .phone.ai-on .ai-ring, .ai-badge .dot { animation: none; } }

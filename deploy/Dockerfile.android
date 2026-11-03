@@ -1,0 +1,5 @@
+# Android 12 (redroid) with Google Play, plus the ADB keyboard for Unicode/Korean text input.
+# Build: copy ADBKeyboard.apk next to this file first (see deploy/install.sh).
+ARG BASE=remote-mobile-redroid:12-gapps-20261029
+FROM ${BASE}
+COPY ADBKeyboard.apk /system/app/ADBKeyboard/ADBKeyboard.apk
