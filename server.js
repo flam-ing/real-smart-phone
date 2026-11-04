@@ -148,7 +148,7 @@ function connect(ws, n) {
         const text = String(msg.text || '').trim().slice(0, 2000);
         if (!text) return;
         agents.addMessage(n, 'user', text);
-        if (agents.isRunning(n)) return agents.addMessage(n, 'assistant', 'I am still working on the last request. Stop it first, then ask again.');
+        if (agents.interrupt(n, text)) return;
         agents.run(n, text).catch(() => {});
         return;
       }

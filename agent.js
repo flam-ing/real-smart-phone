@@ -7,7 +7,8 @@ const path = require('path');
 const { provider, parseJson } = require('./providers');
 const createSam = require('./providers/sam');
 
-const MAX_STEPS = Number(process.env.AI_MAX_STEPS || 15);
+const MAX_STEPS = Number(process.env.AI_MAX_STEPS || 20);
+const CONTINUE_MS = 15 * 60000; // an unfinished request can be picked up again within this time
 const HANDOFF_MS = Number(process.env.AI_HANDOFF_MIN || 10) * 60000;
 // USD per million tokens (Muse Spark 1.3 list price); used only to estimate spending in the log and usage file.
 const PRICE = { input: Number(process.env.AI_PRICE_INPUT || 1.25), cached: Number(process.env.AI_PRICE_CACHED || 0.15), output: Number(process.env.AI_PRICE_OUTPUT || 4.25) };
@@ -80,6 +81,16 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
   function stop(n) { const job = running.get(n); if (job) { job.stop = true; job.resume?.(); } }
   /** The user finished the step the AI handed over. */
   function resume(n) { running.get(n)?.resume?.(); }
+  /** A message sent while the AI works steers it from the next step on; while it waits, it also resumes it. */
+  function interrupt(n, text) {
+    const job = running.get(n);
+    if (!job) return false;
+    job.notes.push(String(text).slice(0, 2000));
+    job.resume?.();
+    announce(n, { running: true, text: 'Got it, adjusting' });
+    return true;
+  }
+  const unfinished = new Map(); // seat -> { task, log, at } of a request that ran out of steps or was stopped
   function announce(n, state) { deviceFor(n).sendJson({ type: 'ai', ...state }); }
 
   async function act(n, device, action, nodes, source, frame, spent) {
@@ -122,7 +133,11 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
   async function run(n, task, { source = 'user' } = {}) {
     if (running.has(n)) throw Object.assign(new Error('AI is already working on this phone'), { code: 'ai_busy' });
     const ai = provider();
-    const job = { stop: false }; running.set(n, job);
+    const job = { stop: false, notes: [] }; running.set(n, job);
+    // "Continue" after an unfinished request picks it up with what was already done.
+    const earlier = unfinished.get(n);
+    unfinished.delete(n);
+    if (earlier && Date.now() - earlier.at < CONTINUE_MS) task = `${task}\nEarlier request, not finished yet: ${earlier.task}\nAlready done for it:\n${earlier.log.join('\n')}`;
     const device = deviceFor(n);
     device.hold();
     announce(n, { running: true, step: 0, text: 'Looking at the screen' });
@@ -135,6 +150,11 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
       for (let step = 1; step <= MAX_STEPS && !job.stop; step++) {
         const [frame, nodes] = await Promise.all([device.frame(), device.uiNodes()]);
         if (job.stop) break;
+        while (job.notes.length) {
+          const note = job.notes.shift();
+          task = `${task}\nThe user added (follow this over anything earlier): ${note}`;
+          log.push(`${step}. the user said: ${note}`);
+        }
         const image = frame ? await downscale(frame) : null;
         const list = nodes.map((node, i) => `${i}: "${node.label}"${node.input ? ' (input)' : ''} at ${Math.round(node.x / SCALE)},${Math.round(node.y / SCALE)}`).join('\n');
         const text = `Task: ${task}\n${source === 'schedule' ? 'This is a scheduled run: do the task once now.\n' : ''}Step ${step} of ${MAX_STEPS}.\nInstalled apps: ${apps || 'unknown'}\nDone so far:\n${log.join('\n') || '(nothing yet)'}\nVisible elements:\n${list || '(none found; use the screenshot)'}`;
@@ -169,7 +189,10 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
         catch (error) { log.push(`${step}. ${JSON.stringify(action)} failed: ${error.message}`); }
         await new Promise(r => setTimeout(r, 900));
       }
-      if (!answer) answer = job.stop ? 'Stopped.' : `I could not finish within ${MAX_STEPS} steps. Tell me how to continue.`;
+      if (!answer) {
+        unfinished.set(n, { task, log: log.slice(-8), at: Date.now() });
+        answer = job.stop ? 'Stopped. Say "continue" to pick it up again.' : `I could not finish within ${MAX_STEPS} steps. Say "continue" to keep going.`;
+      }
       addMessage(n, 'assistant', answer, { source });
       return answer;
     } catch (error) {
@@ -189,7 +212,7 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
   }
 
   const usage = () => { const u = loadUsage(); return { ...u, totalUsd: +cost(u.total).toFixed(4) }; };
-  return { run, stop, resume, isRunning, history, addMessage, usage, providerName: () => { try { return provider().name; } catch { return 'unconfigured'; } } };
+  return { run, stop, resume, interrupt, isRunning, history, addMessage, usage, providerName: () => { try { return provider().name; } catch { return 'unconfigured'; } } };
 }
 
 module.exports = { createAgents, SYSTEM };
