@@ -9,11 +9,12 @@ import subprocess
 import sys
 import time
 
-DOCK = ["com.android.chrome", "com.android.camera2", "com.android.vending", "com.android.calendar"]
+# The Camera app closes at once on these phones (no camera device), so the dock has the Gallery instead.
+DOCK = ["com.android.chrome", "com.android.gallery3d", "com.android.vending", "com.android.calendar"]
 HOME = [
     "com.facebook.katana", "com.instagram.android", "com.instagram.barcelona", "com.whatsapp",
     "com.kakao.talk", "com.google.android.youtube", "com.google.android.apps.maps", "com.spotify.music",
-    "com.google.android.apps.photos", "com.android.gallery3d", "com.android.contacts", "com.android.settings",
+    "com.google.android.apps.photos", "com.android.contacts", "com.android.settings",
 ]
 # Karrot and Toss refuse to run on an emulated phone (their security check), so they are left out.
 COLUMNS = 4

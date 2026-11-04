@@ -325,4 +325,14 @@ bell.onclick = async () => {
 };
 pushState().catch(() => {});
 
+// Installed as an app on a computer: shape the window like the phone (Chrome keeps a minimum width).
+if (matchMedia('(display-mode: standalone)').matches && !matchMedia('(pointer: coarse)').matches && !sessionStorage.getItem('rsp-sized')) {
+  try {
+    sessionStorage.setItem('rsp-sized', '1');
+    const frameW = window.outerWidth - window.innerWidth, frameH = window.outerHeight - window.innerHeight;
+    const height = Math.round(screen.availHeight * 0.92), inner = height - frameH;
+    window.resizeTo(Math.round((inner - 62) * 720 / 1560) + frameW, height);
+  } catch {}
+}
+
 connect();

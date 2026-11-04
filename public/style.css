@@ -23,6 +23,8 @@ button, input, select { font: inherit; }
 
 /* Phone */
 /* Fixed so the page itself never scrolls; iOS pans to a focused field on its own. Top padding clears the notch. */
+/* The phone is as tall as the space above the controls allows; the controls take the phone's width. */
+:root { --nav-h: calc(62px + env(safe-area-inset-bottom, 0px)); --phone-w: min(100vw, calc((100dvh - var(--nav-h) - env(safe-area-inset-top, 0px)) * 720 / 1560)); }
 .app { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; height: 100dvh; display: flex; flex-direction: column; align-items: center; padding-top: env(safe-area-inset-top, 0px); }
 .view { flex: 1 1 auto; min-height: 0; width: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
 .phone { height: min(100%, 216.6667vw); max-height: 100%; width: auto; max-width: 100%; aspect-ratio: 720 / 1560; position: relative; overflow: hidden; background: #08090a; }
@@ -51,7 +53,7 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: 
 .ai-target[hidden] { display: none; }
 .ai-badge button { flex: none; border: 0; border-radius: 14px; padding: 4px 10px; background: rgba(255,255,255,.22); color: #fff; font-size: 12px; cursor: pointer; }
 
-.nav { touch-action: manipulation; flex: 0 0 auto; min-height: 62px; width: min(100%, 520px); display: flex; align-items: center; justify-content: space-around; gap: 3px; padding: 5px 10px max(7px, env(safe-area-inset-bottom, 0px)); background: var(--nav); color: var(--nav-text); }
+.nav { touch-action: manipulation; flex: 0 0 auto; min-height: 62px; width: var(--phone-w); display: flex; align-items: center; justify-content: space-around; gap: 3px; padding: 5px 10px max(7px, env(safe-area-inset-bottom, 0px)); background: var(--nav); color: var(--nav-text); }
 .nav button { appearance: none; background: none; border: 0; border-radius: 12px; color: inherit; min-width: 50px; height: 45px; cursor: pointer; display: grid; place-items: center; padding: 4px 9px; }
 .nav button:hover, .nav button:focus-visible { background: var(--nav-hover); outline: none; }
 .nav svg { display: block; }
