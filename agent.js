@@ -144,6 +144,8 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
     announce(n, { running: true, step: 0, text: 'Looking at the screen' });
     const log = [];
     let answer = '';
+    // Models drift into the screen's language (Korean pages); name the task's language on every step.
+    const lang = /[\uac00-\ud7a3]/.test(task) ? 'Korean' : /^[\x00-\x7f\u2018-\u201d]*$/.test(task) ? 'English' : 'the language of the task';
     const spent = { runs: 1, steps: 0, input: 0, cached: 0, output: 0, reasoning: 0, samImages: 0 };
     // Only the built-in Meta key spends the shared credit; a tester's own key is theirs.
     const shared = ai.builtIn !== false;
@@ -160,7 +162,7 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
         }
         const image = frame ? await downscale(frame) : null;
         const list = nodes.map((node, i) => `${i}: "${node.label}"${node.input ? ' (input)' : ''} at ${Math.round(node.x / SCALE)},${Math.round(node.y / SCALE)}`).join('\n');
-        const text = `Task: ${task}\n${source === 'schedule' ? 'This is a scheduled run: do the task once now.\n' : ''}Step ${step} of ${MAX_STEPS}.\nInstalled apps: ${apps || 'unknown'}\nDone so far:\n${log.join('\n') || '(nothing yet)'}\nVisible elements:\n${list || '(none found; use the screenshot)'}`;
+        const text = `Task: ${task}\n${source === 'schedule' ? 'This is a scheduled run: do the task once now.\n' : ''}Step ${step} of ${MAX_STEPS}.\nInstalled apps: ${apps || 'unknown'}\nDone so far:\n${log.join('\n') || '(nothing yet)'}\nVisible elements:\n${list || '(none found; use the screenshot)'}\nWrite "say" and any answer in ${lang}.`;
         const reply = await ai.decide({ system: SYSTEM, history: [], image, text });
         spent.steps++;
         const u = reply.usage || {};
