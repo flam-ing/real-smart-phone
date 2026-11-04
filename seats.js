@@ -70,6 +70,8 @@ async function configure(serial) {
     ['shell', 'input', 'keyevent', '224'],
     ['shell', 'ime', 'enable', IME],
     ['shell', 'ime', 'set', DEFAULT_IME],
+    // Android disables the Camera app's icon when it finds no camera; keep it on the home screen anyway.
+    ['shell', 'pm', 'enable', 'com.android.camera2/com.android.camera.CameraLauncher'],
   ];
   for (const step of steps) { try { await adb(serial, step); } catch {} }
 }
