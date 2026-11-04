@@ -33,6 +33,17 @@
     if (cp.domAny || cp.dowAny) return cp.domAny ? wOk : dOk;
     return dOk || wOk;
   }
+  /** Minutes after midnight at which it runs on the given day. */
+  function dayRuns(cp, d) {
+    const day = new Date(d); day.setHours(0, 0, 0, 0);
+    if (!cp.mon.has(day.getMonth() + 1)) return [];
+    const dOk = cp.dom.has(day.getDate()), wOk = cp.dow.has(day.getDay());
+    const ok = cp.domAny && cp.dowAny ? true : cp.domAny || cp.dowAny ? (cp.domAny ? wOk : dOk) : dOk || wOk;
+    if (!ok) return [];
+    const out = [];
+    for (const h of [...cp.ho].sort((a, b) => a - b)) for (const m of [...cp.mi].sort((a, b) => a - b)) out.push(h * 60 + m);
+    return out;
+  }
   function next(cp, from = new Date()) {
     const t = new Date(from); t.setSeconds(0, 0);
     for (let i = 0; i < 60 * 24 * 370; i++) { t.setMinutes(t.getMinutes() + 1); if (matches(cp, t)) return t; }
@@ -44,6 +55,8 @@
     if (f.length !== 5) return expr;
     const [mi, ho, dom, mon, dow] = f;
     const at = /^\d+$/.test(mi) && /^\d+$/.test(ho) ? `${pad(ho)}:${pad(mi)}` : '';
+    if (f.join(' ') === '* * * * *') return 'Every minute';
+    if (/^\*\/\d+$/.test(ho) && mi === '0' && dom === '*' && mon === '*' && dow === '*') return `Every ${ho.slice(2)} h`;
     if (mon === '*' && dom === '*') {
       if (at && dow === '*') return `Every day ${at}`;
       if (at && dow === '1-5') return `Weekdays ${at}`;
@@ -52,6 +65,6 @@
     }
     return expr;
   }
-  const api = { parse, matches, next, describe };
+  const api = { parse, matches, dayRuns, next, describe };
   if (typeof module !== 'undefined') module.exports = api; else root.Cron = api;
 })(this);

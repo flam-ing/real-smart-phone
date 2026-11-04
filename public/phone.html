@@ -42,6 +42,11 @@
             </form>
           </section>
           <section class="pane" id="paneSchedule" hidden>
+            <div class="views" role="tablist" aria-label="Schedule view">
+              <button type="button" data-view="list" aria-selected="true">List</button>
+              <button type="button" data-view="calendar" aria-selected="false">Calendar</button>
+              <button type="button" data-view="timeline" aria-selected="false">Timeline</button>
+            </div>
             <div class="schedules" id="schedules"></div>
             <form class="schedule-form" id="scheduleForm">
               <input id="schedPrompt" placeholder="Task (e.g. check new Instagram notifications and summarize)" aria-label="Scheduled task" required>

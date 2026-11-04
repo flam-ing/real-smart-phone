@@ -190,24 +190,90 @@ $('tabSchedule').onclick = () => selectTab('schedule');
 
 // ---------- schedules ----------
 const api = (url, options = {}) => fetch(url, { headers: { 'content-type': 'application/json' }, ...options }).then(async r => { const data = await r.json().catch(() => ({})); if (!r.ok) throw new Error(data.error || 'Request failed'); return data; });
-function renderSchedules(list) {
+// Schedules: a compact list with details, a month calendar, and a one-day timeline (bars last as long as past runs did).
+const COLORS = ['#0866ff', '#00a884', '#e8710a', '#9334e6', '#d93025', '#1e8e3e', '#c5221f', '#185abc'];
+let schedList = [], schedView = 'list', calMonth = new Date(), timelineDay = new Date(), openDetails = new Set();
+const pad2 = n => String(n).padStart(2, '0');
+const fmt = t => new Date(t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
+function renderSchedules(list) { schedList = list; drawSchedules(); }
+function drawSchedules() {
   const box = $('schedules'); box.replaceChildren();
-  if (!list.length) { const p = document.createElement('p'); p.className = 'empty'; p.textContent = 'Add a task for the AI to run on this phone at set times.'; box.append(p); return; }
-  for (const s of list) {
-    const row = document.createElement('div'); row.className = 'sched';
-    const info = document.createElement('div');
-    const title = document.createElement('strong'); title.textContent = `${s.label}${s.enabled ? '' : ' · off'}`;
-    const prompt = document.createElement('p'); prompt.textContent = s.prompt;
-    const last = document.createElement('p'); const run = s.runs?.[0];
-    last.textContent = run ? `Last: ${new Date(run.at).toLocaleString('en-US')} · ${run.status === 'done' ? run.answer : run.status === 'skipped' ? 'skipped (AI was still busy)' : 'failed'}` : (s.next ? `Next: ${new Date(s.next).toLocaleString('en-US')}` : '');
-    info.append(title, prompt, last);
-    const toggle = document.createElement('button'); toggle.textContent = s.enabled ? 'Pause' : 'Resume';
+  for (const b of document.querySelectorAll('.views button')) b.setAttribute('aria-selected', String(b.dataset.view === schedView));
+  if (!schedList.length) { box.append(el('p', 'empty', 'Add a task for the AI to run on this phone at set times, or ask the AI ("every morning at 9, …").')); return; }
+  if (schedView === 'calendar') return drawCalendar(box);
+  if (schedView === 'timeline') return drawTimeline(box);
+  schedList.forEach((s, i) => {
+    const card = el('div', 'sched'), top = el('div', 'sched-top');
+    const swatch = el('span', 'swatch'); swatch.style.background = COLORS[i % COLORS.length];
+    const toggle = el('button', '', s.enabled ? 'Pause' : 'Resume');
     toggle.onclick = () => api('api/schedules', { method: 'POST', body: JSON.stringify({ ...s, enabled: !s.enabled }) }).then(d => renderSchedules(d.schedules));
-    const remove = document.createElement('button'); remove.textContent = 'Delete';
+    const remove = el('button', '', 'Delete');
     remove.onclick = () => api(`api/schedules?id=${encodeURIComponent(s.id)}`, { method: 'DELETE' }).then(d => renderSchedules(d.schedules));
-    row.append(info, toggle, remove); box.append(row);
-  }
+    top.append(swatch, el('strong', '', `${s.label}${s.enabled ? '' : ' · paused'}`), toggle, remove);
+    const run = s.runs?.[0];
+    const meta = el('p', 'meta', [run ? `Last ${fmt(run.at)} · ${run.status}` : '', s.enabled && s.next ? `Next ${fmt(s.next)}` : ''].filter(Boolean).join('  ·  '));
+    const details = el('div', 'details'); details.hidden = !openDetails.has(s.id);
+    for (const r of (s.runs || []).slice(0, 5)) {
+      const item = el('div', 'run', `${fmt(r.at)} · ${r.status}${r.ms ? ` · ${Math.round(r.ms / 1000)}s` : ''}`);
+      if (r.answer) item.append(el('p', '', r.answer));
+      details.append(item);
+    }
+    if (!s.runs?.length) details.append(el('div', 'run', 'No runs yet.'));
+    const more = el('button', 'more', details.hidden ? 'Details' : 'Hide details');
+    more.onclick = () => { details.hidden = !details.hidden; more.textContent = details.hidden ? 'Details' : 'Hide details'; details.hidden ? openDetails.delete(s.id) : openDetails.add(s.id); };
+    card.append(top, el('p', 'prompt', s.prompt), meta, more, details);
+    box.append(card);
+  });
 }
+function drawCalendar(box) {
+  const head = el('div', 'cal-head'), prev = el('button', '', '‹'), next = el('button', '', '›');
+  prev.onclick = () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1); drawSchedules(); };
+  next.onclick = () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1); drawSchedules(); };
+  head.append(prev, el('span', '', calMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })), next);
+  const grid = el('div', 'cal');
+  for (const d of ['S', 'M', 'T', 'W', 'T', 'F', 'S']) grid.append(el('span', 'dow', d));
+  const first = new Date(calMonth.getFullYear(), calMonth.getMonth(), 1), start = new Date(first); start.setDate(1 - first.getDay());
+  const parsed = schedList.map(s => { try { return s.enabled ? Cron.parse(s.cron) : null; } catch { return null; } });
+  const today = new Date().toDateString();
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const cell = el('button', `day${d.getMonth() !== calMonth.getMonth() ? ' out' : ''}${d.toDateString() === today ? ' today' : ''}`);
+    cell.append(el('span', '', String(d.getDate())));
+    const dots = el('div', 'dots'); let total = 0;
+    parsed.forEach((cp, k) => { if (!cp) return; const n = Cron.dayRuns(cp, d).length; if (!n) return; total += n; const dot = el('i'); dot.style.background = COLORS[k % COLORS.length]; dots.append(dot); });
+    cell.append(dots); if (total) cell.append(el('span', 'count', total >= 1000 ? `${(total / 1000).toFixed(1)}k runs` : `${total} run${total > 1 ? 's' : ''}`));
+    cell.onclick = () => { timelineDay = d; schedView = 'timeline'; drawSchedules(); };
+    grid.append(cell);
+  }
+  box.append(head, grid);
+}
+function drawTimeline(box) {
+  const head = el('div', 'cal-head'), prev = el('button', '', '‹'), next = el('button', '', '›');
+  prev.onclick = () => { timelineDay = new Date(timelineDay.getTime() - 864e5); drawSchedules(); };
+  next.onclick = () => { timelineDay = new Date(timelineDay.getTime() + 864e5); drawSchedules(); };
+  head.append(prev, el('span', '', timelineDay.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })), next);
+  const gantt = el('div', 'gantt'), axis = el('div', 'gantt-axis');
+  for (const h of [0, 6, 12, 18, 24]) { const t = el('span', '', `${pad2(h)}:00`); t.style.left = `${Math.min(96, Math.max(4, h / 24 * 100))}%`; axis.append(t); }
+  gantt.append(axis);
+  const isToday = timelineDay.toDateString() === new Date().toDateString(), nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  schedList.forEach((s, k) => {
+    let cp; try { cp = Cron.parse(s.cron); } catch { return; }
+    const runs = s.enabled ? Cron.dayRuns(cp, timelineDay) : [];
+    const done = (s.runs || []).filter(r => r.ms);
+    const minutes = Math.max(1, Math.round((done.reduce((a, r) => a + r.ms, 0) / Math.max(1, done.length) || 60000) / 60000));
+    const row = el('div', 'gantt-row'), track = el('div', 'gantt-track');
+    row.append(el('small', '', `${s.label} · ${s.prompt}`));
+    // Merge back-to-back runs into one bar so "every minute" reads as a solid line.
+    const bars = [];
+    for (const m of runs) { const last = bars[bars.length - 1]; if (last && m <= last[1]) last[1] = Math.max(last[1], m + minutes); else bars.push([m, m + minutes]); }
+    for (const [a, b] of bars) { const bar = el('i'); bar.style.left = `${a / 1440 * 100}%`; bar.style.width = `${Math.min(1440 - a, b - a) / 1440 * 100}%`; bar.style.background = COLORS[k % COLORS.length]; track.append(bar); }
+    if (isToday) { const now = el('span', 'gantt-now'); now.style.left = `${nowMin / 1440 * 100}%`; track.append(now); }
+    row.append(track); gantt.append(row);
+  });
+  box.append(head, gantt);
+}
+for (const b of document.querySelectorAll('.views button')) b.onclick = () => { schedView = b.dataset.view; drawSchedules(); };
 const loadSchedules = () => api('api/schedules').then(d => renderSchedules(d.schedules)).catch(e => { $('schedNote').textContent = e.message; });
 $('schedPreset').onchange = () => {
   const v = $('schedPreset').value;

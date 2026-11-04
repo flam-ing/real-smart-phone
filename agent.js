@@ -175,6 +175,8 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
     } catch (error) {
       const text = error.code === 'ai_not_configured' ? 'The AI is not set up on the server yet.' : error.code === 'capacity' ? 'Other phones are running, so this one cannot wake up right now.' : `Something went wrong: ${error.message}`;
       addMessage(n, 'assistant', text, { source, error: true });
+      // A schedule records this run as failed rather than done.
+      if (source === 'schedule') throw Object.assign(new Error(text), { code: error.code });
       return text;
     } finally {
       if (spent.steps) {

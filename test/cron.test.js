@@ -14,5 +14,8 @@ test('next run of every 15 minutes', () => {
 });
 test('labels and invalid input', () => {
   assert.equal(Cron.describe('30 8 * * *'), 'Every day 08:30');
+  assert.equal(Cron.describe('* * * * *'), 'Every minute');
+  assert.deepEqual(Cron.dayRuns(Cron.parse('0 9,18 * * 1-5'), new Date(2026, 10, 4)), [540, 1080]);
+  assert.deepEqual(Cron.dayRuns(Cron.parse('0 9 * * 1-5'), new Date(2026, 10, 1)), []);
   assert.throws(() => Cron.parse('61 * * * *'));
 });

@@ -88,11 +88,39 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: 
 .compose input { flex: 1; min-width: 0; height: 40px; border: 1px solid #dedfe5; border-radius: 20px; background: #f2f3f5; padding: 0 14px; font-size: 16px; color: var(--text); }
 .compose button { width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--meta); color: #fff; font-size: 19px; cursor: pointer; }
 .schedules { overflow: auto; flex: 1; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
-.sched { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--sheet-line); border-radius: 12px; background: #fff; }
-.sched div { flex: 1; min-width: 0; }
-.sched strong { display: block; font-size: 13px; }
-.sched p { margin: 3px 0 0; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
-.sched button { border: 0; background: #eceef1; border-radius: 8px; padding: 5px 8px; font-size: 12px; cursor: pointer; }
+.views { display: flex; gap: 4px; padding: 8px 14px 0; }
+.views button { flex: 1; border: 1px solid var(--sheet-line); background: #fff; border-radius: 9px; padding: 6px 0; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.views button[aria-selected="true"] { background: var(--meta); border-color: var(--meta); color: #fff; }
+.sched { padding: 10px 12px; border: 1px solid var(--sheet-line); border-radius: 12px; background: #fff; }
+.sched-top { display: flex; gap: 8px; align-items: center; }
+.sched-top strong { flex: 1; min-width: 0; font-size: 13px; }
+.sched-top .swatch { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.sched .prompt { margin: 4px 0 0; color: #2d333c; font-size: 12px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.sched .meta { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
+.sched button { border: 0; background: #eceef1; border-radius: 8px; padding: 5px 8px; font-size: 12px; cursor: pointer; flex: none; }
+.sched .more { background: none; color: var(--meta); padding: 4px 0 0; }
+.sched .details { margin-top: 6px; border-top: 1px solid var(--sheet-line); padding-top: 6px; display: flex; flex-direction: column; gap: 6px; }
+.sched .details[hidden] { display: none; }
+.sched .run { font-size: 11px; color: var(--muted); }
+.sched .run p { margin: 2px 0 0; color: #2d333c; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 9.5em; overflow: auto; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 650; }
+.cal-head button { border: 0; background: #eceef1; border-radius: 8px; width: 28px; height: 26px; cursor: pointer; }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.cal .dow { font-size: 10px; color: var(--muted); text-align: center; }
+.cal .day { min-height: 42px; border-radius: 8px; background: #fff; border: 1px solid var(--sheet-line); padding: 3px; font-size: 10px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.cal .day.out { opacity: .35; }
+.cal .day.today { border-color: var(--meta); }
+.cal .dots { display: flex; flex-wrap: wrap; gap: 2px; }
+.cal .dots i { width: 6px; height: 6px; border-radius: 50%; }
+.cal .count { font-size: 9px; color: var(--muted); }
+.gantt { display: flex; flex-direction: column; gap: 6px; }
+.gantt-axis, .gantt-track { position: relative; height: 16px; }
+.gantt-axis span { position: absolute; transform: translateX(-50%); font-size: 9px; color: var(--muted); }
+.gantt-row { display: flex; flex-direction: column; gap: 3px; }
+.gantt-row small { font-size: 11px; color: #2d333c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gantt-track { height: 14px; background: #eef0f3; border-radius: 4px; overflow: hidden; }
+.gantt-track i { position: absolute; top: 0; bottom: 0; border-radius: 2px; min-width: 2px; }
+.gantt-now { position: absolute; top: 0; bottom: 0; width: 2px; background: #d93025; }
 .schedule-form { border-top: 1px solid #e5e7eb; padding: 10px 12px 14px; display: flex; flex-direction: column; gap: 8px; }
 .schedule-form input, .schedule-form select { height: 38px; border: 1px solid #dedfe5; border-radius: 10px; background: #f6f7f9; padding: 0 10px; font-size: 16px; min-width: 0; }
 .schedule-row { display: flex; gap: 6px; }
