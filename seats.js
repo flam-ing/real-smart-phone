@@ -62,7 +62,7 @@ async function create(n, dataDir) {
     'androidboot.redroid_dpi=320', `androidboot.redroid_fps=${env.SEAT_FPS || 20}`], 60000);
 }
 
-async function configure(serial) {
+async function configure(serial, n) {
   // Keep the display awake and make the ADB keyboard available for Korean text.
   const steps = [
     ['shell', 'settings', 'put', 'system', 'screen_off_timeout', '2147483647'],
@@ -70,10 +70,10 @@ async function configure(serial) {
     ['shell', 'input', 'keyevent', '224'],
     ['shell', 'ime', 'enable', IME],
     ['shell', 'ime', 'set', DEFAULT_IME],
-    // Android disables the Camera app's icon when it finds no camera; keep it on the home screen anyway.
-    ['shell', 'pm', 'enable', 'com.android.camera2/com.android.camera.CameraLauncher'],
   ];
   for (const step of steps) { try { await adb(serial, step); } catch {} }
+  // Android disables the Camera app's icon when it finds no camera; only root may turn it back on.
+  try { await docker(['exec', containerName(n), 'pm', 'enable', 'com.android.camera2/com.android.camera.CameraLauncher'], 15000); } catch {}
 }
 
 async function boot(n) {
@@ -97,7 +97,7 @@ async function boot(n) {
     try {
       await run('adb', ['connect', serial], { timeout: 5000 });
       if ((await adb(serial, ['shell', 'getprop', 'sys.boot_completed'], 5000)) === '1') {
-        await configure(serial);
+        await configure(serial, n);
         states.set(n, 'running'); lastError.delete(n);
         return serial;
       }
