@@ -68,22 +68,7 @@
               <button type="button" data-view="timeline" aria-selected="false">Timeline</button>
             </div>
             <div class="schedules" id="schedules"></div>
-            <form class="schedule-form" id="scheduleForm">
-              <input id="schedPrompt" placeholder="Task (e.g. check new Instagram notifications and summarize)" aria-label="Scheduled task" required>
-              <div class="schedule-row">
-                <select id="schedPreset" aria-label="Repeat">
-                  <option value="daily">Every day</option>
-                  <option value="weekday">Weekdays</option>
-                  <option value="every">Every N min</option>
-                  <option value="cron">Custom (cron)</option>
-                </select>
-                <input id="schedTime" type="time" value="09:00" aria-label="Time">
-                <input id="schedEvery" type="number" min="5" max="720" value="60" aria-label="Minutes" hidden>
-                <input id="schedCron" placeholder="0 9 * * *" aria-label="cron" hidden>
-                <button type="submit">Add</button>
-              </div>
-              <p class="schedule-note" id="schedNote">Korea time. Runs on the server even with this page closed.</p>
-            </form>
+            <p class="schedule-note" id="schedNote">Ask in Session to add one, e.g. "every weekday at 9, check Instagram notifications". Korea time; runs even with this page closed.</p>
           </section>
         </aside>
       </section>

@@ -17,6 +17,19 @@ const CATALOG = [
   { id: 'openrouter', name: 'OpenRouter', icon: 'openrouter.svg', kind: 'openai', baseUrl: 'https://openrouter.ai/api/v1', reasoningStyle: 'openrouter',
     reasoning: ['low', 'medium', 'high'], keep: () => true },
   { id: 'xai', name: 'xAI Grok', icon: 'grok.svg', kind: 'openai', baseUrl: 'https://api.x.ai/v1', reasoning: null, keep: m => /^grok/.test(m) && !/image/.test(m) },
+  // OpenAI-compatible hosts, limited to models that read images (the AI works from screenshots).
+  // Several serve Meta's open-weight Llama 4.
+  ...[
+    ['fireworks', 'Fireworks', 'fireworks-color.svg', 'https://api.fireworks.ai/inference/v1', /llama4|llama-v4|vision|vl/i],
+    ['together', 'Together', 'together-color.svg', 'https://api.together.xyz/v1', /llama-4|vision|vl/i],
+    ['groq', 'Groq', 'groq.svg', 'https://api.groq.com/openai/v1', /llama-4|vision/i],
+    ['mistral', 'Mistral', 'mistral-color.svg', 'https://api.mistral.ai/v1', /pixtral|mistral-(medium|small|large)/i],
+    ['deepinfra', 'DeepInfra', 'deepinfra-color.svg', 'https://api.deepinfra.com/v1/openai', /llama-4|vision|vl/i],
+    ['huggingface', 'Hugging Face', 'huggingface-color.svg', 'https://router.huggingface.co/v1', /llama-4|vision|vl/i],
+    ['nvidia', 'NVIDIA', 'nvidia-color.svg', 'https://integrate.api.nvidia.com/v1', /llama-4|vision|vl/i],
+    ['qwen', 'Qwen', 'qwen-color.svg', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1', /vl|qwen3/i],
+    ['kimi', 'Kimi', 'kimi.svg', 'https://api.moonshot.ai/v1', /vision|kimi/i],
+  ].map(([id, name, icon, baseUrl, pattern]) => ({ id, name, icon, kind: 'openai', baseUrl, reasoning: null, keep: m => pattern.test(m) })),
 ];
 const byId = id => CATALOG.find(p => p.id === id);
 
@@ -48,7 +61,7 @@ function createModels({ dataDir, env = process.env }) {
       .filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => m.name.replace(/^models\//, ''));
     else {
       const data = await get(`${p.baseUrl}/models`, { authorization: `Bearer ${key}` });
-      ids = (data.data || []).filter(m => id !== 'openrouter' || (m.architecture?.input_modalities || []).includes('image')).map(m => m.id);
+      ids = (Array.isArray(data) ? data : data.data || []).filter(m => id !== 'openrouter' || (m.architecture?.input_modalities || []).includes('image')).map(m => m.id);
     }
     const models = [...new Set(ids.filter(p.keep))].sort().reverse().slice(0, 80);
     cache.set(`${n}:${id}`, { at: Date.now(), models });

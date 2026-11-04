@@ -26,7 +26,7 @@ Deployment files are in `deploy/` (systemd unit, nginx location, Android image, 
 
 ## AI provider
 
-Each phone's Model tab picks the provider, model and reasoning level. Meta's Muse Spark is included; testers can connect their own OpenAI, Anthropic, Google Gemini, OpenRouter or xAI key (checked by listing its models, stored on the server for that phone only). Provider logos: Lobe Icons (MIT), see public/icons/providers.
+Each phone's Model tab picks the provider, model and reasoning level. Meta's Muse Spark is included; testers can connect their own key for OpenAI, Anthropic, Google Gemini, OpenRouter, xAI, Fireworks, Together, Groq, Mistral, DeepInfra, Hugging Face, NVIDIA, Qwen or Kimi (checked by listing its models, stored on the server for that phone only). Provider logos: Lobe Icons (MIT), see public/icons/providers.
 
 Server defaults:
 Configuration only. `AI_PROVIDER=meta` (default) uses Muse Spark on the Meta Model API (`MODEL_API_KEY`, `AI_MODEL=muse-spark-1.3`). `AI_PROVIDER=gemini` with `GEMINI_API_KEY`, or `AI_PROVIDER=openai-compatible` with `AI_BASE_URL`, `AI_API_KEY` and `AI_MODEL`, also work.

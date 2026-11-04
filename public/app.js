@@ -285,7 +285,7 @@ function renderSchedules(list) { schedList = list; drawSchedules(); }
 function drawSchedules() {
   const box = $('schedules'); box.replaceChildren();
   for (const b of document.querySelectorAll('.views button')) b.setAttribute('aria-selected', String(b.dataset.view === schedView));
-  if (!schedList.length) { box.append(el('p', 'empty', 'Add a task for the AI to run on this phone at set times, or ask the AI ("every morning at 9, …").')); return; }
+  if (!schedList.length) { box.append(el('p', 'empty', 'No schedules yet.')); return; }
   if (schedView === 'calendar') return drawCalendar(box);
   if (schedView === 'timeline') return drawTimeline(box);
   schedList.forEach((s, i) => {
@@ -360,19 +360,6 @@ function drawTimeline(box) {
 }
 for (const b of document.querySelectorAll('.views button')) b.onclick = () => { schedView = b.dataset.view; drawSchedules(); };
 const loadSchedules = () => api('api/schedules').then(d => renderSchedules(d.schedules)).catch(e => { $('schedNote').textContent = e.message; });
-$('schedPreset').onchange = () => {
-  const v = $('schedPreset').value;
-  $('schedTime').hidden = !(v === 'daily' || v === 'weekday'); $('schedEvery').hidden = v !== 'every'; $('schedCron').hidden = v !== 'cron';
-};
-$('scheduleForm').addEventListener('submit', event => {
-  event.preventDefault();
-  const v = $('schedPreset').value, [hh, mm] = ($('schedTime').value || '09:00').split(':').map(Number);
-  const cron = v === 'daily' ? `${mm} ${hh} * * *` : v === 'weekday' ? `${mm} ${hh} * * 1-5` : v === 'every' ? `*/${Math.max(5, Number($('schedEvery').value) || 60)} * * * *` : $('schedCron').value.trim();
-  try { Cron.parse(cron); } catch (e) { $('schedNote').textContent = `Time: ${e.message}`; return; }
-  api('api/schedules', { method: 'POST', body: JSON.stringify({ prompt: $('schedPrompt').value, cron }) })
-    .then(d => { $('schedPrompt').value = ''; $('schedNote').textContent = 'Korea time. Runs on the server even with this page closed.'; renderSchedules(d.schedules); })
-    .catch(e => { $('schedNote').textContent = e.message; });
-});
 
 // ---------- notifications: the phone's Android notifications arrive as push notifications ----------
 const bell = $('bell'), pushNote = $('pushNote');
