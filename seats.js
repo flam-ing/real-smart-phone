@@ -76,12 +76,26 @@ async function configure(serial, n) {
   try { await docker(['exec', containerName(n), 'pm', 'enable', 'com.android.camera2/com.android.camera.CameraLauncher'], 15000); } catch {}
 }
 
+// Starting a container is one critical section: otherwise two wakes both see a free slot and both start,
+// and MAX_RUNNING phones at 5 GB each can exhaust the host.
+let startQueue = Promise.resolve();
+const exclusive = fn => { const result = startQueue.then(fn, fn); startQueue = result.catch(() => {}); return result; };
+// The server decides which running phone may be put to sleep to make room (one nobody is using).
+let evictor = async () => null;
+function setEvictor(fn) { evictor = fn; }
+
 async function boot(n) {
   const serial = serialOf(n);
   const wasRunning = await isRunning(n);
-  if (!wasRunning) {
-    const running = (await runningSeats()).filter(s => s !== n);
-    if (running.length >= MAX_RUNNING) throw Object.assign(new Error('capacity'), { code: 'capacity', running });
+  if (!wasRunning) await exclusive(async () => {
+    if (await isRunning(n)) return;
+    let running = (await runningSeats()).filter(s => s !== n);
+    while (running.length >= MAX_RUNNING) {
+      const victim = await evictor(running).catch(() => null);
+      if (!victim || !running.includes(victim)) throw Object.assign(new Error('capacity'), { code: 'capacity', running });
+      await sleepSeat(victim);
+      running = (await runningSeats()).filter(s => s !== n);
+    }
     states.set(n, 'starting');
     const dataDir = await prepareData(n);
     // A seat made from an older image is recreated on the current one; its /data stays.
@@ -91,7 +105,7 @@ async function boot(n) {
     ]);
     if (have && have === want) await docker(['start', containerName(n)], 30000).catch(() => create(n, dataDir));
     else await create(n, dataDir);
-  }
+  });
   // Re-checking a phone that is already on must not look like a restart to its viewers.
   if (!wasRunning || states.get(n) !== 'running') states.set(n, 'booting');
   const deadline = Date.now() + 240000;
@@ -135,4 +149,6 @@ async function status(n) {
   return { seat: n, state, error: lastError.get(n) || null, running: seats.length, maxRunning: MAX_RUNNING };
 }
 
-module.exports = { SEAT_COUNT, MAX_RUNNING, WIDTH, HEIGHT, IME, DEFAULT_IME, seatNumber, serialOf, wake, sleepSeat, status, isRunning, adb };
+const isBooting = n => booting.has(n);
+
+module.exports = { isBooting, SEAT_COUNT, MAX_RUNNING, WIDTH, HEIGHT, IME, DEFAULT_IME, seatNumber, serialOf, wake, sleepSeat, status, isRunning, adb, setEvictor };

@@ -122,12 +122,15 @@ class Device {
   async launch(pkg) {
     if (!/^[A-Za-z][\w]*(\.[A-Za-z][\w]*)+$/.test(pkg || '')) throw new Error('invalid package');
     const component = (await this.shell(['cmd', 'package', 'resolve-activity', '--brief', '-a', 'android.intent.action.MAIN', '-c', 'android.intent.category.LAUNCHER', pkg])).split('\n').pop().trim();
-    if (!component.startsWith(`${pkg}/`)) throw new Error(`${pkg} is not installed`);
+    // adb joins arguments into one line for the phone's shell, so only plain component names get through.
+    if (!component.startsWith(`${pkg}/`) || !/^[\w.]+\/[\w.]+$/.test(component)) throw new Error(`${pkg} is not installed`);
     await this.shell(['am', 'start', '-n', component]);
   }
   openUrl(url) {
-    if (!/^https?:\/\/[^\s'"`]+$/.test(url || '')) return Promise.reject(new Error('invalid url'));
-    return this.shell(['am', 'start', '-a', 'android.intent.action.VIEW', '-d', url]);
+    // URLs come from the model (and so from pages it read). adb hands the line to the phone's shell, which would run
+    // anything after ; | & $( ... so the URL goes in single quotes, which it may not contain.
+    if (!/^https?:\/\/[^\s'"`\\\x00-\x1f\x7f]+$/.test(url || '') || url.length > 2000) return Promise.reject(new Error('invalid url'));
+    return this.shell([`am start -a android.intent.action.VIEW -d '${url}'`]);
   }
 
   /** A fresh JPEG of the screen. Uses the live stream when it is current. */

@@ -39,9 +39,14 @@ setInterval(async () => {
     const device = deviceFor(n);
     // A phone whose owner wants its notifications stays on (within MAX_RUNNING).
     if (device.inUse() || agents.isRunning(n) || notifications.hasSubscribers(n)) { touchSeat(n); continue; }
-    if (Date.now() - (lastUsed.get(n) || 0) > IDLE_SLEEP_MS && await seats.isRunning(n)) seats.sleepSeat(n);
+    if (Date.now() - (lastUsed.get(n) || 0) > IDLE_SLEEP_MS && await seats.isRunning(n) && !device.inUse() && !agents.isRunning(n) && !seats.isBooting(n)) seats.sleepSeat(n);
   }
 }, 60000).unref();
+// At capacity, a phone kept on only for its notifications (nobody watching, no AI run) gives way, least recently used first.
+// Its notifications pause until it wakes again.
+seats.setEvictor(async running => running
+  .filter(s => !deviceFor(s).inUse() && !agents.isRunning(s) && !seats.isBooting(s))
+  .sort((a, b) => (lastUsed.get(a) || 0) - (lastUsed.get(b) || 0))[0] || null);
 
 function seatFromCookie(req) {
   const match = /(?:^|;\s*)rsp_invite=([\w.-]+)/.exec(req.headers.cookie || '');
@@ -150,7 +155,13 @@ function connect(ws, n) {
   ws.send(JSON.stringify({ type: 'ai', running: agents.isRunning(n) }));
   if (camera.wanted(n).on) ws.send(JSON.stringify({ type: 'camera', ...camera.wanted(n) }));
   state();
-  device.ensure().then(() => { state(); if (device.latestFrame && ws.readyState === WebSocket.OPEN) ws.send(device.latestFrame, { binary: true }); }, () => state());
+  // When every phone is busy, keep trying while this viewer stays (the page says it is retrying).
+  let retry = null;
+  const start = () => device.ensure().then(() => { state(); if (device.latestFrame && ws.readyState === WebSocket.OPEN) ws.send(device.latestFrame, { binary: true }); }, error => {
+    state();
+    if (ws.readyState === WebSocket.OPEN) retry = setTimeout(start, error?.code === 'capacity' ? 15000 : 30000);
+  });
+  start();
   const timer = setInterval(state, 5000);
   ws.on('message', (raw, isBinary) => {
     if (isBinary) return camera.frame(n, raw); // a frame from this viewer's camera
@@ -177,7 +188,7 @@ function connect(ws, n) {
       case 'ai_resume': return agents.resume(n);
     }
   });
-  ws.on('close', () => { clearInterval(timer); device.removeClient(ws); });
+  ws.on('close', () => { clearInterval(timer); clearTimeout(retry); device.removeClient(ws); });
 }
 
 server.listen(PORT, '127.0.0.1', () => console.log(`Real Smart Phone on 127.0.0.1:${PORT}${BASE}/`));

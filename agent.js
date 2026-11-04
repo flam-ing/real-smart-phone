@@ -70,14 +70,24 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
   // Token usage per seat and in total, so the limited API credit can be watched.
   const usageFile = path.join(dataDir, 'usage.json');
   function loadUsage() { try { return JSON.parse(fs.readFileSync(usageFile, 'utf8')); } catch { return { total: {}, seats: {} }; } }
-  function addUsage(n, run) {
+  // Shared-key runs count toward the totals; every run counts toward today's per-phone figures, because SAM 3.1
+  // always uses the server's key, even on a phone that brought its own model key.
+  function addUsage(n, run, shared) {
     const usage = loadUsage();
-    for (const bucket of [usage.total, usage.seats[n] ||= {}]) for (const [key, value] of Object.entries(run)) bucket[key] = (bucket[key] || 0) + value;
+    if (shared) for (const bucket of [usage.total, usage.seats[n] ||= {}]) for (const [key, value] of Object.entries(run)) bucket[key] = (bucket[key] || 0) + value;
+    const days = usage.days ||= {}, day = (days[today()] ||= {})[n] ||= { usd: 0, samImages: 0 };
+    day.usd += shared ? cost(run) : 0; day.samImages += run.samImages || 0;
+    for (const key of Object.keys(days).sort().slice(0, -7)) delete days[key];
     try { fs.mkdirSync(dataDir, { recursive: true }); fs.writeFileSync(usageFile, JSON.stringify(usage)); } catch {}
     return usage;
   }
   // SAM 3.1 is billed per image; its price is not published yet, so it is counted (samImages) but not priced.
   const cost = u => ((u.input || 0) - (u.cached || 0)) * PRICE.input / 1e6 + (u.cached || 0) * PRICE.cached / 1e6 + (u.output || 0) * PRICE.output / 1e6;
+  // Caps on the shared credit: one invite must not be able to spend it for everyone.
+  const LIMIT = { total: Number(process.env.SHARED_USD_LIMIT || 120), seatDay: Number(process.env.SHARED_USD_PER_SEAT_DAY || 3), samSeatDay: Number(process.env.SAM_IMAGES_PER_SEAT_DAY || 150) };
+  const today = () => new Date().toLocaleDateString('sv-SE');
+  const todayFor = n => loadUsage().days?.[today()]?.[n] || { usd: 0, samImages: 0 };
+  const sharedSpentOut = n => cost(loadUsage().total) >= LIMIT.total || todayFor(n).usd >= LIMIT.seatDay;
   const isRunning = n => running.has(n);
   function stop(n) { const job = running.get(n); if (job) { job.stop = true; job.resume?.(); } }
   /** The user finished the step the AI handed over. */
@@ -106,6 +116,7 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
       case 'tap_target': {
         // SAM 3.1 looks at the full-resolution screen; the best match is tapped and shown to the viewer.
         if (!frame) throw new Error('no screen image');
+        if (todayFor(n).samImages + spent.samImages >= LIMIT.samSeatDay || cost(loadUsage().total) >= LIMIT.total) throw new Error('SAM 3.1 is used up for today on this phone; use tap_node or tap instead');
         spent.samImages++;
         const [box] = await samModel().find(frame, String(action.target || ''));
         if (!box) throw new Error(`SAM 3.1 found no "${action.target}"`);
@@ -150,6 +161,7 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
     // Only the built-in Meta key spends the shared credit; a tester's own key is theirs.
     const shared = ai.builtIn !== false;
     try {
+      if (shared && sharedSpentOut(n)) throw Object.assign(new Error('credit limit'), { code: 'credit_limit' });
       await ensureSeat(n);
       const apps = await device.shell(['pm', 'list', 'packages', '-3']).then(o => o.replace(/package:/g, '').split('\n').filter(Boolean).slice(0, 40).join(', ')).catch(() => '');
       for (let step = 1; step <= MAX_STEPS && !job.stop; step++) {
@@ -201,14 +213,14 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
       addMessage(n, 'assistant', answer, { source });
       return answer;
     } catch (error) {
-      const text = error.code === 'ai_not_configured' ? 'The AI is not set up on the server yet.' : error.code === 'capacity' ? 'Other phones are running, so this one cannot wake up right now.' : `Something went wrong: ${error.message}`;
+      const text = error.code === 'ai_not_configured' ? 'The AI is not set up on the server yet.' : error.code === 'capacity' ? 'Other phones are running, so this one cannot wake up right now.' : error.code === 'credit_limit' ? 'The shared AI credit for this phone is used up for today. Try again tomorrow, or connect your own provider key in the Model tab.' : `Something went wrong: ${error.message}`;
       addMessage(n, 'assistant', text, { source, error: true });
       // A schedule records this run as failed rather than done.
       if (source === 'schedule') throw Object.assign(new Error(text), { code: error.code });
       return text;
     } finally {
       if (spent.steps) {
-        const usage = shared ? addUsage(n, spent) : loadUsage();
+        const usage = addUsage(n, spent, shared);
         console.log(JSON.stringify({ event: 'ai_run', seat: n, source, provider: ai.name, steps: spent.steps, samImages: spent.samImages, input: spent.input, output: spent.output, reasoning: spent.reasoning, usd: +cost(spent).toFixed(4), totalUsd: +cost(usage.total).toFixed(4) }));
       }
       running.delete(n); device.release();
