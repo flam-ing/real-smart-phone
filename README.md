@@ -1,6 +1,11 @@
 # Real Smart Phone
 
-Each seat number opens its own Android phone in the cloud. An AI can operate the phone for you, now or on a schedule.
+Your own Android phone in the cloud, and an AI built on Meta's models that uses it for you. It sees the screen, taps and types like a person, hands control back when it needs you, and keeps working on a schedule.
+
+[![Demo video: Real Smart Phone (1:27)](docs/demo-poster.jpg)](docs/demo.mp4)
+
+Demo video (1:27): [docs/demo.mp4](docs/demo.mp4). Every scene is a real run on the beta at mobile.ai-ing.org; narration is TTS and the music was synthesized for the video.
+For reference: [demo script](docs/demo-script.md) · [hackathon submission draft](docs/submission-draft.md)
 
 - **Closed beta.** An invite link opens your phone directly. Each invite names a separate Android 12 phone (redroid) with its own storage; apps and photos stay while it sleeps. Accounts come later.
 - **Live control.** H.264 from the phone (scrcpy), JPEG frames to the browser with frame acknowledgements, touches streamed as they happen. Type on a computer keyboard straight into the phone (Korean included), or use the phone's own keyboard.
