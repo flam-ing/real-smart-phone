@@ -43,7 +43,8 @@
     function toast(text, ms = 1600) { $('toast').textContent = text; $('toast').hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { $('toast').hidden = true; }, ms); }
     // MJPEG: the browser keeps replacing the image as frames arrive. Reconnect if the stream drops.
     function watch() { live.src = `camera/stream?k=${encodeURIComponent(key)}&t=${Date.now()}`; }
-    live.onload = () => { $('hint').hidden = true; $('badge').hidden = false; };
+    // A portrait phone camera fills the screen; a landscape webcam (Mac) is shown whole instead of cropped.
+    live.onload = () => { $('hint').hidden = true; $('badge').hidden = false; live.style.objectFit = live.naturalWidth > live.naturalHeight ? 'contain' : 'cover'; };
     live.onerror = () => setTimeout(watch, 1500);
     watch();
     $('shutter').onclick = async () => {
