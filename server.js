@@ -11,6 +11,7 @@ const { createAgents } = require('./agent');
 const { createSchedules } = require('./schedules');
 const { createNotifications } = require('./notifications');
 const { createInvites } = require('./invites');
+const { createCamera } = require('./camera');
 
 const env = process.env;
 const PORT = Number(env.PORT || 18100);
@@ -26,6 +27,7 @@ const schedules = createSchedules({ dataDir: DATA, runAgent: (n, prompt, options
 setInterval(() => schedules.tick(seats.SEAT_COUNT).catch?.(() => {}), 15000).unref();
 const notifications = createNotifications({ dataDir: DATA });
 const invites = createInvites({ dataDir: DATA });
+const camera = createCamera({ dataDir: DATA, deviceFor });
 
 // Sleep seats nobody has watched or used for a while, so others can wake theirs.
 const lastUsed = new Map();
@@ -89,6 +91,16 @@ async function handle(req, res) {
     return send(res, 302, '', { location: `${BASE}/`, 'set-cookie': `${COOKIE}=${token}; Path=${BASE || '/'}; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax` });
   }
   if (req.method === 'GET' && route === '/') return serveFile(res, seat ? 'phone.html' : 'closed.html');
+  // The phone's own Camera page: authorised by its seat key, since the phone's browser has no invite.
+  if (route === '/camera' || route.startsWith('/camera/')) {
+    const n = camera.seatFromKey(url.searchParams.get('k'));
+    if (!n) return send(res, 403, 'Forbidden');
+    if (req.method === 'GET' && route === '/camera') return serveFile(res, 'camera.html');
+    if (req.method === 'GET' && route === '/camera/stream') return camera.stream(n, req, res);
+    if (req.method === 'POST' && route === '/camera/shoot') return send(res, 200, { name: await camera.shoot(n) });
+    if (req.method === 'POST' && route === '/camera/flip') return send(res, 200, { facing: camera.flip(n) });
+    return send(res, 404, 'Not found');
+  }
   if (route.startsWith('/api/')) {
     if (!seat) return send(res, 401, { error: 'seat' });
     touchSeat(seat);
@@ -116,7 +128,7 @@ const server = http.createServer((req, res) => {
   handle(req, res).catch(error => { if (!res.headersSent) send(res, error.status || 500, { error: error.status ? error.message : 'Server error.' }); else res.end(); if (!error.status) console.error(error); });
 });
 
-const wss = new WebSocket.Server({ noServer: true, maxPayload: 64 * 1024 });
+const wss = new WebSocket.Server({ noServer: true, maxPayload: 1024 * 1024 });
 server.on('upgrade', (req, socket, head) => {
   const seat = seatFromCookie(req);
   if (new URL(req.url, 'http://local').pathname !== `${BASE}/ws` || !seat || !sameOrigin(req)) { socket.destroy(); return; }
@@ -129,10 +141,12 @@ function connect(ws, n) {
   const state = async () => { try { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'state', ...(await seatStatus(n)) })); } catch {} };
   ws.send(JSON.stringify({ type: 'chat_history', messages: agents.history(n) }));
   ws.send(JSON.stringify({ type: 'ai', running: agents.isRunning(n) }));
+  if (camera.wanted(n).on) ws.send(JSON.stringify({ type: 'camera', ...camera.wanted(n) }));
   state();
   device.ensure().then(() => { state(); if (device.latestFrame && ws.readyState === WebSocket.OPEN) ws.send(device.latestFrame, { binary: true }); }, () => state());
   const timer = setInterval(state, 5000);
-  ws.on('message', raw => {
+  ws.on('message', (raw, isBinary) => {
+    if (isBinary) return camera.frame(n, raw); // a frame from this viewer's camera
     let msg; try { msg = JSON.parse(raw.toString()); } catch { return; }
     touchSeat(n);
     const clamp = (v, hi) => Math.max(0, Math.min(hi, Math.round(Number(v) || 0)));

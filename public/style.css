@@ -51,6 +51,11 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: 
 .ai-target { position: absolute; z-index: 2; pointer-events: none; border: 3px solid var(--meta); border-radius: 12px; background: rgba(8,102,255,.14); box-shadow: 0 0 18px rgba(8,102,255,.6); transition: opacity .4s; }
 .ai-target span { position: absolute; left: -3px; top: -24px; padding: 2px 7px; border-radius: 8px; background: var(--meta); color: #fff; font-size: 11px; white-space: nowrap; }
 .ai-target[hidden] { display: none; }
+/* The viewer's camera is being sent into the phone's Camera page. */
+.cam-chip { position: absolute; z-index: 3; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border-radius: 18px; background: rgba(24,27,32,.92); color: #fff; font-size: 12px; white-space: nowrap; }
+.cam-chip[hidden] { display: none; }
+.cam-chip i { width: 8px; height: 8px; border-radius: 50%; background: #ff4d4d; }
+.cam-chip button { border: 0; border-radius: 12px; padding: 4px 10px; background: rgba(255,255,255,.2); color: #fff; font-size: 12px; cursor: pointer; }
 .ai-badge button { flex: none; border: 0; border-radius: 14px; padding: 4px 10px; background: rgba(255,255,255,.22); color: #fff; font-size: 12px; cursor: pointer; }
 
 .nav { touch-action: manipulation; flex: 0 0 auto; min-height: 62px; width: var(--phone-w); display: flex; align-items: center; justify-content: space-around; gap: 3px; padding: 5px 10px max(7px, env(safe-area-inset-bottom, 0px)); background: var(--nav); color: var(--nav-text); }

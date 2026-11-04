@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <title>Camera</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; color: #fff; font-family: -apple-system, Roboto, sans-serif; overflow: hidden; }
+    .live { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .hint { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 32px; text-align: center; font-size: 15px; line-height: 1.5; color: #c9ced6; }
+    .hint[hidden] { display: none; }
+    .hint strong { color: #fff; font-size: 17px; }
+    .bar { position: fixed; left: 0; right: 0; bottom: 0; height: 132px; display: flex; align-items: center; justify-content: space-around; background: linear-gradient(transparent, rgba(0,0,0,.65)); }
+    .shutter { width: 76px; height: 76px; border-radius: 50%; border: 5px solid #fff; background: rgba(255,255,255,.25); cursor: pointer; }
+    .shutter:active { background: #fff; }
+    .side { width: 52px; height: 52px; border-radius: 50%; border: 0; background: rgba(255,255,255,.18); color: #fff; font-size: 13px; cursor: pointer; display: grid; place-items: center; }
+    .thumb { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; background: rgba(255,255,255,.12); border: 2px solid rgba(255,255,255,.6); }
+    .flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity .25s; }
+    .flash.on { opacity: .85; transition: none; }
+    .toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); padding: 7px 13px; border-radius: 16px; background: rgba(20,22,26,.85); font-size: 13px; }
+    .toast[hidden] { display: none; }
+    .badge { position: fixed; top: 18px; left: 16px; display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 14px; background: rgba(8,102,255,.85); font-size: 12px; }
+    .badge i { width: 7px; height: 7px; border-radius: 50%; background: #ff4d4d; }
+  </style>
+</head>
+<body>
+  <img class="live" id="live" alt="">
+  <div class="hint" id="hint"><strong>Camera</strong>Waiting for your device's camera… Keep Real Smart Phone open on your iPhone, Android or Mac and allow camera access.</div>
+  <div class="badge" id="badge" hidden><i></i>Live from your device</div>
+  <div class="toast" id="toast" hidden></div>
+  <div class="flash" id="flash"></div>
+  <div class="bar">
+    <img class="thumb" id="thumb" alt="Last photo">
+    <button class="shutter" id="shutter" aria-label="Take photo"></button>
+    <button class="side" id="flip" aria-label="Switch camera">⟲</button>
+  </div>
+  <script>
+    'use strict';
+    const key = new URLSearchParams(location.search).get('k') || '';
+    const $ = id => document.getElementById(id);
+    const live = $('live');
+    function toast(text, ms = 1600) { $('toast').textContent = text; $('toast').hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { $('toast').hidden = true; }, ms); }
+    // MJPEG: the browser keeps replacing the image as frames arrive. Reconnect if the stream drops.
+    function watch() { live.src = `camera/stream?k=${encodeURIComponent(key)}&t=${Date.now()}`; }
+    live.onload = () => { $('hint').hidden = true; $('badge').hidden = false; };
+    live.onerror = () => setTimeout(watch, 1500);
+    watch();
+    $('shutter').onclick = async () => {
+      $('flash').classList.add('on'); setTimeout(() => $('flash').classList.remove('on'), 60);
+      try {
+        const res = await fetch(`camera/shoot?k=${encodeURIComponent(key)}`, { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not take the photo');
+        // Keep the shot as the thumbnail, like a real camera app.
+        const c = document.createElement('canvas'); c.width = 104; c.height = 104;
+        const w = live.naturalWidth, h = live.naturalHeight, side = Math.min(w, h);
+        c.getContext('2d').drawImage(live, (w - side) / 2, (h - side) / 2, side, side, 0, 0, 104, 104);
+        $('thumb').src = c.toDataURL('image/jpeg', .8);
+        toast('Saved to Gallery');
+      } catch (e) { toast(e.message, 2600); }
+    };
+    $('flip').onclick = () => fetch(`camera/flip?k=${encodeURIComponent(key)}`, { method: 'POST' }).catch(() => {});
+  </script>
+</body>
+</html>

@@ -41,6 +41,7 @@ function connect() {
     else if (msg.type === 'chat') addMessage(msg.message);
     else if (msg.type === 'ai') setAi(msg);
     else if (msg.type === 'ai_target') showTarget(msg);
+    else if (msg.type === 'camera') setCamera(msg);
     else if (msg.type === 'schedules') renderSchedules(msg.schedules || []);
 
   };
@@ -324,6 +325,42 @@ bell.onclick = async () => {
   } catch (e) { note(`Notifications: ${e.message}`); }
 };
 pushState().catch(() => {});
+
+// ---------- camera: this device's camera, live inside the phone's Camera page ----------
+// The server asks for it only while that page is open; frames go up the same WebSocket as JPEGs.
+let camStream = null, camTimer = null, camFacing = 'environment', camWanted = false;
+const camVideo = $('camVideo'), camCanvas = document.createElement('canvas');
+async function startCamera(facing) {
+  stopCamera(false);
+  camFacing = facing || camFacing;
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+  } catch (e) {
+    $('camChip').hidden = false; $('camText').textContent = `Camera blocked: ${e.name === 'NotAllowedError' ? 'allow camera access for this site' : e.message}`;
+    return;
+  }
+  camVideo.srcObject = camStream; await camVideo.play().catch(() => {});
+  $('camChip').hidden = false; $('camText').textContent = 'Your camera is live in the phone';
+  camTimer = setInterval(() => {
+    if (!ws || ws.readyState !== WebSocket.OPEN || ws.bufferedAmount > 256 * 1024 || !camVideo.videoWidth) return;
+    const scale = Math.min(1, 960 / Math.max(camVideo.videoWidth, camVideo.videoHeight));
+    camCanvas.width = Math.round(camVideo.videoWidth * scale); camCanvas.height = Math.round(camVideo.videoHeight * scale);
+    camCanvas.getContext('2d').drawImage(camVideo, 0, 0, camCanvas.width, camCanvas.height);
+    camCanvas.toBlob(blob => { if (blob && ws && ws.readyState === WebSocket.OPEN) ws.send(blob); }, 'image/jpeg', 0.72);
+  }, 100);
+}
+function stopCamera(hideChip = true) {
+  clearInterval(camTimer); camTimer = null;
+  camStream?.getTracks().forEach(t => t.stop()); camStream = null; camVideo.srcObject = null;
+  if (hideChip) $('camChip').hidden = true;
+}
+function setCamera({ on, facing }) {
+  camWanted = !!on;
+  if (!on) return stopCamera();
+  if (!camStream || (facing && facing !== camFacing)) startCamera(facing);
+}
+$('camStop').onclick = () => { camWanted = false; stopCamera(); };
+document.addEventListener('visibilitychange', () => { if (document.hidden) stopCamera(false); else if (camWanted) startCamera(); });
 
 // Installed as an app on a computer: shape the window like the phone (Chrome keeps a minimum width).
 if (matchMedia('(display-mode: standalone)').matches && !matchMedia('(pointer: coarse)').matches && !sessionStorage.getItem('rsp-sized')) {

@@ -4,17 +4,22 @@
 Usage (root, on the host): home-layout.py <seat>
 Only installed apps are placed. Run again after installing more apps.
 """
+import base64
+import hashlib
+import hmac
+import os
 import sqlite3
 import subprocess
 import sys
 import time
 
-# The Camera app closes at once on these phones (no camera device), so the dock has the Gallery instead.
-DOCK = ["com.android.chrome", "com.android.gallery3d", "com.android.vending", "com.android.calendar"]
+# The Android Camera app closes at once on these phones (no camera device). The dock's Camera is a shortcut to
+# Real Smart Phone's camera page instead, which shows the viewer's real camera live (see camera.js).
+DOCK = ["com.android.chrome", "CAMERA", "com.android.vending", "com.android.calendar"]
 HOME = [
     "com.facebook.katana", "com.instagram.android", "com.instagram.barcelona", "com.whatsapp",
     "com.kakao.talk", "com.google.android.youtube", "com.google.android.apps.maps", "com.spotify.music",
-    "com.google.android.apps.photos", "com.android.contacts", "com.android.settings",
+    "com.google.android.apps.photos", "com.android.gallery3d", "com.android.contacts", "com.android.settings",
 ]
 # Karrot and Toss refuse to run on an emulated phone (their security check), so they are left out.
 COLUMNS = 4
@@ -22,6 +27,16 @@ COLUMNS = 4
 seat = int(sys.argv[1])
 serial = f"127.0.0.1:{5600 + seat}"
 db = f"/home/ubuntu/phone-seats/{seat}/data/data/com.android.launcher3/databases/launcher.db"
+APP = "/opt/real-smart-phone"
+DATA = os.environ.get("APP_DATA", "/var/lib/real-smart-phone")
+ORIGIN = os.environ.get("PUBLIC_URL", "https://mobile.ai-ing.org")
+
+
+def camera_url():
+    # Same key as camera.js keyFor(): HMAC-SHA256 of "cam:<seat>" with the camera secret, base64url, 24 chars.
+    secret = open(f"{DATA}/camera-secret").read().strip().encode()
+    key = base64.urlsafe_b64encode(hmac.new(secret, f"cam:{seat}".encode(), hashlib.sha256).digest()).decode().rstrip("=")[:24]
+    return f"{ORIGIN}/camera?k={key}"
 
 
 def adb(*args):
@@ -43,8 +58,8 @@ def intent(comp):
 # Until Chrome is installed from Play, the built-in WebView browser takes its place.
 dock = [p if p != "com.android.chrome" or component(p) else "org.chromium.webview_shell" for p in DOCK]
 rows = []
-for i, package in enumerate(p for p in dock if component(p)):
-    rows.append((component(package), -101, i, i, 0))
+for i, package in enumerate(p for p in dock if p == "CAMERA" or component(p)):
+    rows.append(("CAMERA" if package == "CAMERA" else component(package), -101, i, i, 0))
 placed = [p for p in HOME if component(p)]
 for i, package in enumerate(placed):
     rows.append((component(package), -100, 0, i % COLUMNS, 1 + i // COLUMNS))
@@ -55,6 +70,12 @@ with sqlite3.connect(db) as con:
     con.execute("DELETE FROM favorites WHERE itemType IN (0, 1, 6)")  # apps and shortcuts; widgets stay
     next_id = (con.execute("SELECT COALESCE(MAX(_id), 0) FROM favorites").fetchone()[0] or 0) + 1
     for offset, (comp, container, screen, x, y) in enumerate(rows):
+        if comp == "CAMERA":  # a launcher shortcut (itemType 1) that opens the camera page in the browser
+            icon = open(f"{APP}/public/icons/camera-app.png", "rb").read()
+            con.execute("INSERT INTO favorites (_id, title, intent, container, screen, cellX, cellY, spanX, spanY, itemType, appWidgetId, profileId, rank, options, restored, icon)"
+                        " VALUES (?, 'Camera', ?, ?, ?, ?, ?, 1, 1, 1, -1, 0, 0, 0, 0, ?)",
+                        (next_id + offset, f"{camera_url()}#Intent;action=android.intent.action.VIEW;launchFlags=0x10000000;end", container, screen, x, y, icon))
+            continue
         label = comp.split("/")[0]
         con.execute("INSERT INTO favorites (_id, title, intent, container, screen, cellX, cellY, spanX, spanY, itemType, appWidgetId, profileId, rank, options, restored)"
                     " VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 0, -1, 0, 0, 0, 0)", (next_id + offset, label, intent(comp), container, screen, x, y))
