@@ -55,7 +55,7 @@ async function prepareData(n) {
 async function create(n, dataDir) {
   try { await docker(['rm', '-f', containerName(n)], 20000); } catch {}
   await docker(['run', '-d', '--name', containerName(n), '--privileged', '--restart', 'no',
-    '--label', `real-smart-phone.seat=${n}`, '--memory', env.SEAT_MEMORY || '3g', '--cpus', env.SEAT_CPUS || '2',
+    '--label', `real-smart-phone.seat=${n}`, '--memory', env.SEAT_MEMORY || '5g', '--cpus', env.SEAT_CPUS || '2',
     '-v', `${dataDir}:/data`, '-p', `${serialOf(n)}:5555`, IMAGE,
     'androidboot.redroid_gpu_mode=guest', 'androidboot.use_memfd=true',
     `androidboot.redroid_width=${WIDTH}`, `androidboot.redroid_height=${HEIGHT}`,
