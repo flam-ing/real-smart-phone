@@ -168,19 +168,41 @@ function addMessage(m) { const box = $('messages'); box.querySelector('.empty')?
 $('compose').addEventListener('submit', event => {
   event.preventDefault();
   const text = $('prompt').value.trim(); if (!text) return;
+  // The sheet stays open after sending; it closes with × or a tap outside it.
   sendJson({ type: 'chat', text }); $('prompt').value = '';
-  showDrawer(false);
 });
 
 // ---------- drawer & tabs ----------
 function showDrawer(open) {
   phone.classList.toggle('open', open);
+  if (!open) drawer.classList.remove('full');
   $('ai').setAttribute('aria-expanded', String(open));
   drawer.setAttribute('aria-hidden', String(!open)); drawer.inert = !open;
 }
 $('ai').onclick = () => showDrawer(!phone.classList.contains('open'));
 $('close').onclick = () => showDrawer(false);
 $('shade').onclick = () => showDrawer(false);
+// Drag the handle up to cover the whole phone, down to go back to half or to close; a tap toggles the size.
+(() => {
+  const grip = drawer.querySelector('.handle-area');
+  let start = null;
+  grip.addEventListener('pointerdown', event => { start = { y: event.clientY, h: drawer.getBoundingClientRect().height }; try { grip.setPointerCapture(event.pointerId); } catch {} drawer.classList.add('dragging'); });
+  grip.addEventListener('pointermove', event => {
+    if (!start) return;
+    const max = phone.getBoundingClientRect().height;
+    drawer.style.height = `${Math.max(120, Math.min(max, start.h - (event.clientY - start.y)))}px`;
+  });
+  const end = event => {
+    if (!start) return;
+    const dy = event.clientY - start.y, full = drawer.classList.contains('full');
+    start = null; drawer.classList.remove('dragging'); drawer.style.height = '';
+    if (Math.abs(dy) < 6) return drawer.classList.toggle('full');
+    if (dy < -40) drawer.classList.add('full');
+    else if (dy > 40) { if (full) drawer.classList.remove('full'); else showDrawer(false); }
+  };
+  grip.addEventListener('pointerup', end);
+  grip.addEventListener('pointercancel', end);
+})();
 function selectTab(name) {
   $('tabChat').setAttribute('aria-selected', String(name === 'chat'));
   $('tabSchedule').setAttribute('aria-selected', String(name === 'schedule'));

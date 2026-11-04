@@ -71,7 +71,11 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: 
 .phone.open .shade { opacity: 1; visibility: visible; }
 .drawer { touch-action: manipulation; position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; height: min(66%, 520px); min-height: 260px; display: flex; flex-direction: column; border-radius: 20px 20px 0 0; background: var(--sheet); box-shadow: 0 -12px 38px #17212d33; transform: translateY(103%); transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility .28s; visibility: hidden; }
 .phone.open .drawer { transform: translateY(0); visibility: visible; }
-.handle { width: 34px; height: 4px; border-radius: 99px; background: #c2c6ce; margin: 10px auto 4px; }
+.drawer.full { height: calc(100% - 6px); max-height: none; border-radius: 16px 16px 0 0; }
+.drawer:not(.dragging) { transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility .28s, height .25s ease; }
+.handle-area { padding: 6px 0 2px; cursor: grab; touch-action: none; }
+.handle-area:active { cursor: grabbing; }
+.handle { width: 40px; height: 5px; border-radius: 99px; background: #c2c6ce; margin: 4px auto 4px; }
 .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px 10px; border-bottom: 1px solid var(--sheet-line); }
 .tabs { display: flex; gap: 4px; }
 .tabs button { border: 0; background: none; padding: 6px 10px; border-radius: 10px; font-size: 15px; font-weight: 650; color: var(--muted); cursor: pointer; }
