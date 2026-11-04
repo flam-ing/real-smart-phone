@@ -19,10 +19,10 @@ function showConnection(text) { connection.textContent = text; connection.hidden
 function stateText(s) {
   if (!s) return 'Connecting to your phone…';
   if (s.state === 'running') return currentBitmap ? '' : 'Loading the screen…';
-  if (s.state === 'starting' || s.state === 'booting') return `Starting phone ${s.seat}… the first start can take a minute.`;
-  if (s.error === 'capacity') return `${s.running} phones are already running. Retrying shortly…`;
+  if (s.state === 'starting' || s.state === 'booting') return 'Starting your phone… the first start can take a minute.';
+  if (s.error === 'capacity') return 'All phones are busy right now. Retrying shortly…';
   if (s.state === 'error') return 'Could not start the phone. Retrying shortly…';
-  return `Waking phone ${s.seat}…`;
+  return 'Waking your phone…';
 }
 function connect() {
   const socket = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${location.pathname.replace(/\/?$/, '/')}ws`);
@@ -35,7 +35,8 @@ function connect() {
       pendingFrame = { data: event.data, socket }; drawLatest(); return;
     }
     let msg; try { msg = JSON.parse(event.data); } catch { return; }
-    if (msg.type === 'state') { seatState = msg; if (msg.state !== 'running' || !currentBitmap) showConnection(stateText(msg)); }
+    // Once the screen is live, status messages never cover it.
+    if (msg.type === 'state') { seatState = msg; if (!currentBitmap) showConnection(stateText(msg)); else if (msg.state === 'running') showConnection(''); }
     else if (msg.type === 'chat_history') renderMessages(msg.messages);
     else if (msg.type === 'chat') addMessage(msg.message);
     else if (msg.type === 'ai') setAi(msg);

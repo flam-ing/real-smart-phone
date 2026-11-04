@@ -78,7 +78,8 @@ async function configure(serial, n) {
 
 async function boot(n) {
   const serial = serialOf(n);
-  if (!(await isRunning(n))) {
+  const wasRunning = await isRunning(n);
+  if (!wasRunning) {
     const running = (await runningSeats()).filter(s => s !== n);
     if (running.length >= MAX_RUNNING) throw Object.assign(new Error('capacity'), { code: 'capacity', running });
     states.set(n, 'starting');
@@ -91,7 +92,8 @@ async function boot(n) {
     if (have && have === want) await docker(['start', containerName(n)], 30000).catch(() => create(n, dataDir));
     else await create(n, dataDir);
   }
-  states.set(n, 'booting');
+  // Re-checking a phone that is already on must not look like a restart to its viewers.
+  if (!wasRunning || states.get(n) !== 'running') states.set(n, 'booting');
   const deadline = Date.now() + 240000;
   while (Date.now() < deadline) {
     try {
