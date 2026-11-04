@@ -2,6 +2,7 @@
   "name": "real-smart-phone",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "A personal Android phone in the cloud per seat, with an AI that can operate it.",
   "main": "server.js",
   "scripts": {

@@ -35,3 +35,7 @@ Each phone's Model tab picks the provider, model and reasoning level. Meta's Mus
 
 Server defaults:
 Configuration only. `AI_PROVIDER=meta` (default) uses Muse Spark on the Meta Model API (`MODEL_API_KEY`, `AI_MODEL=muse-spark-1.3`). `AI_PROVIDER=gemini` with `GEMINI_API_KEY`, or `AI_PROVIDER=openai-compatible` with `AI_BASE_URL`, `AI_API_KEY` and `AI_MODEL`, also work.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
