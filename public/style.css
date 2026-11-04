@@ -98,6 +98,32 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: 
 .compose { display: flex; gap: 8px; align-items: center; border-top: 1px solid #e5e7eb; padding: 10px 12px 14px; }
 .compose input { flex: 1; min-width: 0; height: 40px; border: 1px solid #dedfe5; border-radius: 20px; background: #f2f3f5; padding: 0 14px; font-size: 16px; color: var(--text); }
 .compose button { width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--meta); color: #fff; font-size: 19px; cursor: pointer; }
+.model-pane { overflow: auto; flex: 1; padding: 10px 14px 14px; display: flex; flex-direction: column; gap: 10px; font-size: 12px; }
+.model-current { margin: 0; color: var(--muted); }
+.model-current b { color: var(--text); font-weight: 650; }
+.providers { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.provider { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border: 1px solid var(--sheet-line); border-radius: 10px; background: #fff; cursor: pointer; text-align: left; font-size: 12px; color: var(--text); min-width: 0; }
+.provider img { width: 16px; height: 16px; flex: none; }
+.provider span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.provider small { color: var(--muted); font-size: 10px; flex: none; }
+.provider.on { border-color: var(--meta); box-shadow: 0 0 0 1px var(--meta) inset; background: #f3f7ff; }
+.provider.on small { color: var(--meta); }
+.model-pick { display: flex; flex-direction: column; gap: 8px; }
+.model-pick label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); }
+.model-pick select { height: 34px; border: 1px solid #dedfe5; border-radius: 9px; background: #f6f7f9; padding: 0 8px; font-size: 13px; color: var(--text); }
+.effort { display: flex; flex-direction: column; gap: 4px; color: var(--muted); }
+.effort[hidden] { display: none; }
+.effort-options { display: flex; gap: 4px; }
+.effort-options button { flex: 1; border: 1px solid var(--sheet-line); background: #fff; border-radius: 8px; padding: 5px 0; font-size: 11px; color: var(--muted); cursor: pointer; }
+.effort-options button[aria-checked="true"] { background: var(--meta); border-color: var(--meta); color: #fff; }
+.key-form { display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px solid var(--sheet-line); border-radius: 10px; background: #fff; }
+.key-form[hidden] { display: none; }
+.key-form p { margin: 0; }
+.key-form input { height: 34px; border: 1px solid #dedfe5; border-radius: 9px; padding: 0 9px; font-size: 16px; }
+.key-actions { display: flex; gap: 6px; }
+.key-actions button { flex: 1; border: 0; border-radius: 9px; padding: 8px 0; font-size: 12px; font-weight: 600; cursor: pointer; background: #eceef1; }
+.key-actions button[type="submit"] { background: var(--meta); color: #fff; }
+.key-note, .model-note { margin: 0; font-size: 11px; color: var(--muted); }
 .schedules { overflow: auto; flex: 1; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
 .views { display: flex; gap: 4px; padding: 8px 14px 0; }
 .views button { flex: 1; border: 1px solid var(--sheet-line); background: #fff; border-radius: 9px; padding: 6px 0; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }

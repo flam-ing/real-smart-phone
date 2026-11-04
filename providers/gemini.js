@@ -1,5 +1,7 @@
 'use strict';
-module.exports = function gemini({ apiKey, model }) {
+// Reasoning levels map to Gemini 2.5 thinking budgets (tokens).
+const BUDGET = { low: 512, medium: 2048, high: 8192 };
+module.exports = function gemini({ apiKey, model, reasoning }) {
   return {
     name: `gemini/${model}`,
     configured: Boolean(apiKey),
@@ -12,7 +14,7 @@ module.exports = function gemini({ apiKey, model }) {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents, generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 512 } }),
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents, generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 4096, ...(BUDGET[reasoning] && /2\.5/.test(model) ? { thinkingConfig: { thinkingBudget: BUDGET[reasoning] } } : {}) } }),
         signal: AbortSignal.timeout(45000),
       });
       const data = await response.json().catch(() => ({}));

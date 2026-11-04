@@ -47,7 +47,7 @@ function downscale(jpeg) {
   });
 }
 
-function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = async () => {} }) {
+function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = async () => {}, providerFor = () => provider() }) {
   const samModel = () => createSam({ apiKey: process.env.MODEL_API_KEY || process.env.AI_API_KEY });
   const running = new Map(); // seat -> {stop:boolean}
   const historyFile = n => path.join(dataDir, `chat-${n}.json`);
@@ -132,7 +132,7 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
 
   async function run(n, task, { source = 'user' } = {}) {
     if (running.has(n)) throw Object.assign(new Error('AI is already working on this phone'), { code: 'ai_busy' });
-    const ai = provider();
+    const ai = providerFor(n);
     const job = { stop: false, notes: [] }; running.set(n, job);
     // "Continue" after an unfinished request picks it up with what was already done.
     const earlier = unfinished.get(n);
@@ -144,6 +144,8 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
     const log = [];
     let answer = '';
     const spent = { runs: 1, steps: 0, input: 0, cached: 0, output: 0, reasoning: 0, samImages: 0 };
+    // Only the built-in Meta key spends the shared credit; a tester's own key is theirs.
+    const shared = ai.builtIn !== false;
     try {
       await ensureSeat(n);
       const apps = await device.shell(['pm', 'list', 'packages', '-3']).then(o => o.replace(/package:/g, '').split('\n').filter(Boolean).slice(0, 40).join(', ')).catch(() => '');
@@ -203,7 +205,7 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
       return text;
     } finally {
       if (spent.steps) {
-        const usage = addUsage(n, spent);
+        const usage = shared ? addUsage(n, spent) : loadUsage();
         console.log(JSON.stringify({ event: 'ai_run', seat: n, source, provider: ai.name, steps: spent.steps, samImages: spent.samImages, input: spent.input, output: spent.output, reasoning: spent.reasoning, usd: +cost(spent).toFixed(4), totalUsd: +cost(usage.total).toFixed(4) }));
       }
       running.delete(n); device.release();
@@ -212,7 +214,7 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
   }
 
   const usage = () => { const u = loadUsage(); return { ...u, totalUsd: +cost(u.total).toFixed(4) }; };
-  return { run, stop, resume, interrupt, isRunning, history, addMessage, usage, providerName: () => { try { return provider().name; } catch { return 'unconfigured'; } } };
+  return { run, stop, resume, interrupt, isRunning, history, addMessage, usage, providerName: n => { try { return providerFor(n).name; } catch { return 'unconfigured'; } } };
 }
 
 module.exports = { createAgents, SYSTEM };

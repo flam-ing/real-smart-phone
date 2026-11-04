@@ -204,13 +204,74 @@ $('shade').onclick = () => showDrawer(false);
   grip.addEventListener('pointercancel', end);
 })();
 function selectTab(name) {
-  $('tabChat').setAttribute('aria-selected', String(name === 'chat'));
-  $('tabSchedule').setAttribute('aria-selected', String(name === 'schedule'));
-  $('paneChat').hidden = name !== 'chat'; $('paneSchedule').hidden = name !== 'schedule';
+  for (const [tab, pane, key] of [['tabChat', 'paneChat', 'chat'], ['tabSchedule', 'paneSchedule', 'schedule'], ['tabModel', 'paneModel', 'model']]) {
+    $(tab).setAttribute('aria-selected', String(name === key)); $(pane).hidden = name !== key;
+  }
   if (name === 'schedule') loadSchedules();
+  if (name === 'model') loadModel();
 }
 $('tabChat').onclick = () => selectTab('chat');
 $('tabSchedule').onclick = () => selectTab('schedule');
+$('tabModel').onclick = () => selectTab('model');
+
+// ---------- model: Muse Spark by default; testers can connect their own provider and pick model and reasoning ----------
+let modelView = null, keyFor = null;
+const LEVELS = { minimal: 'Minimal', low: 'Low', medium: 'Medium', high: 'High' };
+function modelNote(text) { $('modelNote').textContent = text || ''; }
+async function loadModel() {
+  try { modelView = await api('api/model'); drawModel(); loadModelList(); }
+  catch (e) { modelNote(e.message); }
+}
+function drawModel() {
+  const v = modelView, active = v.providers.find(p => p.id === v.active);
+  $('modelCurrent').innerHTML = '';
+  $('modelCurrent').append('Using ', Object.assign(document.createElement('b'), { textContent: `${active?.name || v.active} · ${v.model}` }), active?.builtIn ? ' (included)' : ' (your key)');
+  const box = $('providers'); box.replaceChildren();
+  for (const p of v.providers) {
+    const b = el('button', `provider${p.id === v.active ? ' on' : ''}`);
+    b.type = 'button';
+    const img = el('img'); img.src = p.icon; img.alt = '';
+    b.append(img, el('span', '', p.name), el('small', '', p.id === v.active ? 'In use' : p.builtIn ? 'Included' : p.connected ? 'Connected' : 'Add key'));
+    b.onclick = () => p.connected ? choose({ active: p.id }) : openKeyForm(p);
+    if (p.connected && !p.builtIn) b.oncontextmenu = event => { event.preventDefault(); if (confirm(`Remove your ${p.name} key from this phone?`)) api(`api/model/key?id=${p.id}`, { method: 'DELETE' }).then(d => { modelView = d; drawModel(); loadModelList(); }); };
+    box.append(b);
+  }
+  const opts = $('effortOptions'); opts.replaceChildren();
+  $('effortRow').hidden = !active?.reasoning;
+  for (const level of active?.reasoning || []) {
+    const b = el('button', '', LEVELS[level] || level); b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(level === v.reasoning));
+    b.onclick = () => choose({ reasoning: level });
+    opts.append(b);
+  }
+}
+async function loadModelList() {
+  const select = $('modelSelect');
+  select.replaceChildren(el('option', '', modelView.model)); select.value = modelView.model;
+  try {
+    const { models } = await api(`api/model/models?id=${encodeURIComponent(modelView.active)}`);
+    select.replaceChildren(...[...new Set([modelView.model, ...models])].map(m => { const o = el('option', '', m); o.value = m; return o; }));
+    select.value = modelView.model;
+  } catch (e) { modelNote(e.message); }
+}
+$('modelSelect').onchange = () => choose({ model: $('modelSelect').value });
+async function choose(change) {
+  try { const switching = change.active && change.active !== modelView.active; modelView = await api('api/model', { method: 'POST', body: JSON.stringify(change) }); drawModel(); if (switching) loadModelList(); modelNote('Saved. The next request uses it.'); }
+  catch (e) { modelNote(e.message); }
+}
+function openKeyForm(p) {
+  keyFor = p; $('keyForm').hidden = false; $('keyTitle').textContent = `Connect your ${p.name} key`; $('keyInput').value = ''; $('keyInput').focus();
+}
+$('keyCancel').onclick = () => { $('keyForm').hidden = true; keyFor = null; };
+$('keyForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!keyFor) return;
+  modelNote('Checking the key…');
+  try {
+    const d = await api('api/model/key', { method: 'POST', body: JSON.stringify({ id: keyFor.id, apiKey: $('keyInput').value }) });
+    $('keyInput').value = ''; $('keyForm').hidden = true;
+    modelView = d; await choose({ active: keyFor.id }); keyFor = null;
+  } catch (e) { modelNote(e.message); }
+});
 
 // ---------- schedules ----------
 const api = (url, options = {}) => fetch(url, { headers: { 'content-type': 'application/json' }, ...options }).then(async r => { const data = await r.json().catch(() => ({})); if (!r.ok) throw new Error(data.error || 'Request failed'); return data; });

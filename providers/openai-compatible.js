@@ -1,7 +1,7 @@
 'use strict';
 // For the Meta Model API (Muse Spark, https://api.meta.ai/v1) or any OpenAI-compatible chat completions endpoint with image input.
 // No response_format: not every compatible endpoint accepts it, and replies are parsed as JSON anyway.
-module.exports = function openaiCompatible({ baseUrl, apiKey, model, reasoning }) {
+module.exports = function openaiCompatible({ baseUrl, apiKey, model, reasoning, reasoningStyle }) {
   return {
     name: `openai-compatible/${model}`,
     configured: Boolean(baseUrl && apiKey && model),
@@ -16,7 +16,7 @@ module.exports = function openaiCompatible({ baseUrl, apiKey, model, reasoning }
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
         // Reasoning tokens count toward max_tokens; leave room for them so the JSON answer is never cut off.
-        body: JSON.stringify({ model, messages, temperature: 0.2, max_tokens: 2000, ...(reasoning ? { reasoning_effort: reasoning } : {}) }),
+        body: JSON.stringify({ model, messages, temperature: 0.2, max_tokens: 2000, ...(reasoning ? (reasoningStyle === 'openrouter' ? { reasoning: { effort: reasoning } } : { reasoning_effort: reasoning }) : {}) }),
         signal: AbortSignal.timeout(45000),
       });
       const data = await response.json().catch(() => ({}));

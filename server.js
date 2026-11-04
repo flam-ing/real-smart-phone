@@ -12,6 +12,7 @@ const { createSchedules } = require('./schedules');
 const { createNotifications } = require('./notifications');
 const { createInvites } = require('./invites');
 const { createCamera } = require('./camera');
+const { createModels } = require('./models');
 
 const env = process.env;
 const PORT = Number(env.PORT || 18100);
@@ -22,7 +23,8 @@ const PUBLIC = path.join(__dirname, 'public');
 const COOKIE = 'rsp_invite';
 const IDLE_SLEEP_MS = Number(env.IDLE_SLEEP_MIN || 30) * 60000;
 
-const agents = createAgents({ dataDir: DATA, deviceFor, ensureSeat: n => deviceFor(n).ensure(), addSchedule: (n, body) => schedules.upsert(n, body), notify: (n, payload) => notifications.push(n, payload) });
+const models = createModels({ dataDir: DATA });
+const agents = createAgents({ dataDir: DATA, deviceFor, providerFor: n => models.providerFor(n), ensureSeat: n => deviceFor(n).ensure(), addSchedule: (n, body) => schedules.upsert(n, body), notify: (n, payload) => notifications.push(n, payload) });
 const schedules = createSchedules({ dataDir: DATA, runAgent: (n, prompt, options) => agents.run(n, prompt, options) });
 setInterval(() => schedules.tick(seats.SEAT_COUNT).catch?.(() => {}), 15000).unref();
 const notifications = createNotifications({ dataDir: DATA });
@@ -73,7 +75,7 @@ function sameOrigin(req) {
 
 async function seatStatus(n) {
   const status = await seats.status(n);
-  return { ...status, seatCount: seats.SEAT_COUNT, ai: { running: agents.isRunning(n), provider: agents.providerName() } };
+  return { ...status, seatCount: seats.SEAT_COUNT, ai: { running: agents.isRunning(n), provider: agents.providerName(n) } };
 }
 
 async function handle(req, res) {
@@ -112,6 +114,11 @@ async function handle(req, res) {
     if (req.method === 'GET' && route === '/api/push') return send(res, 200, { publicKey: notifications.publicKey, subscribed: notifications.hasSubscribers(seat) });
     if (req.method === 'POST' && route === '/api/push') { notifications.subscribe(seat, (await readJson(req)).subscription); deviceFor(seat).ensure().catch(() => {}); return send(res, 200, { ok: true }); }
     if (req.method === 'DELETE' && route === '/api/push') { notifications.unsubscribe(seat, (await readJson(req)).endpoint); return send(res, 200, { ok: true }); }
+    if (req.method === 'GET' && route === '/api/model') return send(res, 200, models.view(seat));
+    if (req.method === 'POST' && route === '/api/model') { const body = await readJson(req); models.choose(seat, body); return send(res, 200, models.view(seat)); }
+    if (req.method === 'GET' && route === '/api/model/models') return send(res, 200, { models: await models.listModels(seat, url.searchParams.get('id')) });
+    if (req.method === 'POST' && route === '/api/model/key') { const body = await readJson(req); const r = await models.connect(seat, body.id, body.apiKey); return send(res, 200, { ...models.view(seat), models: r.models }); }
+    if (req.method === 'DELETE' && route === '/api/model/key') { models.disconnect(seat, url.searchParams.get('id')); return send(res, 200, models.view(seat)); }
     if (req.method === 'GET' && route === '/api/usage') return send(res, 200, agents.usage());
     if (req.method === 'GET' && route === '/api/chat') return send(res, 200, { messages: agents.history(seat) });
     if (req.method === 'POST' && route === '/api/ai/stop') { agents.stop(seat); return send(res, 200, { ok: true }); }
