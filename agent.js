@@ -8,6 +8,10 @@ const { provider, parseJson } = require('./providers');
 const createSam = require('./providers/sam');
 
 const MAX_STEPS = Number(process.env.AI_MAX_STEPS || 20);
+// Only the latest steps go into each prompt, so a long run costs about the same per step instead of growing every step.
+const LOG_LINES = Number(process.env.AI_LOG_LINES || 30);
+const recentLog = log => log.length <= LOG_LINES ? log.join('\n')
+  : [`(${log.length - LOG_LINES} earlier steps not shown)`, ...log.slice(-LOG_LINES)].join('\n');
 const CONTINUE_MS = 15 * 60000; // an unfinished request can be picked up again within this time
 const HANDOFF_MS = Number(process.env.AI_HANDOFF_MIN || 10) * 60000;
 // USD per million tokens (Muse Spark 1.3 list price); used only to estimate spending in the log and usage file.
@@ -174,7 +178,7 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
         }
         const image = frame ? await downscale(frame) : null;
         const list = nodes.map((node, i) => `${i}: "${node.label}"${node.input ? ' (input)' : ''} at ${Math.round(node.x / SCALE)},${Math.round(node.y / SCALE)}`).join('\n');
-        const text = `Task: ${task}\n${source === 'schedule' ? 'This is a scheduled run: do the task once now.\n' : ''}Step ${step} of ${MAX_STEPS}.\nInstalled apps: ${apps || 'unknown'}\nDone so far:\n${log.join('\n') || '(nothing yet)'}\nVisible elements:\n${list || '(none found; use the screenshot)'}\nWrite "say" and any answer in ${lang}.`;
+        const text = `Task: ${task}\n${source === 'schedule' ? 'This is a scheduled run: do the task once now.\n' : ''}Step ${step} of ${MAX_STEPS}.\nInstalled apps: ${apps || 'unknown'}\nDone so far:\n${recentLog(log) || '(nothing yet)'}\nVisible elements:\n${list || '(none found; use the screenshot)'}\nWrite "say" and any answer in ${lang}.`;
         const reply = await ai.decide({ system: SYSTEM, history: [], image, text });
         spent.steps++;
         const u = reply.usage || {};
