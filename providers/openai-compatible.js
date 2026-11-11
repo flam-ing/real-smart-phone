@@ -17,10 +17,10 @@ module.exports = function openaiCompatible({ baseUrl, apiKey, model, reasoning, 
         headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
         // Reasoning tokens count toward max_tokens; leave room for them so the JSON answer is never cut off.
         body: JSON.stringify({ model, messages, temperature: 0.2, max_tokens: 2000, ...(reasoning ? (reasoningStyle === 'openrouter' ? { reasoning: { effort: reasoning } } : { reasoning_effort: reasoning }) : {}) }),
-        signal: AbortSignal.timeout(45000),
+        signal: AbortSignal.timeout(90000),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw Object.assign(new Error(data.error?.message || `AI ${response.status}`), { code: 'ai_failed' });
+      if (!response.ok) throw Object.assign(new Error(data.error?.message || `AI ${response.status}`), { code: 'ai_failed', status: response.status });
       return { text: data.choices?.[0]?.message?.content || '', usage: data.usage };
     },
   };

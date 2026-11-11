@@ -9,6 +9,17 @@ const createSam = require('./providers/sam');
 
 const MAX_STEPS = Number(process.env.AI_MAX_STEPS || 20);
 // Only the latest steps go into each prompt, so a long run costs about the same per step instead of growing every step.
+// A slow or busy model should not end the whole run: retry timeouts, 429 and 5xx twice with a short wait.
+const retryable = e => e?.name === 'TimeoutError' || e?.name === 'AbortError' || /timeout|fetch failed|ECONNRESET|socket/i.test(e?.message || '') || e?.status === 429 || e?.status >= 500;
+async function decideWithRetry(ai, input, job, tries = 3) {
+  for (let i = 1; ; i++) {
+    try { return await ai.decide(input); }
+    catch (error) {
+      if (i >= tries || job?.stop || !retryable(error)) throw error;
+      await new Promise(r => setTimeout(r, 3000 * i));
+    }
+  }
+}
 const LOG_LINES = Number(process.env.AI_LOG_LINES || 30);
 const recentLog = log => log.length <= LOG_LINES ? log.join('\n')
   : [`(${log.length - LOG_LINES} earlier steps not shown)`, ...log.slice(-LOG_LINES)].join('\n');
@@ -179,7 +190,7 @@ function createAgents({ dataDir, deviceFor, ensureSeat, addSchedule, notify = as
         const image = frame ? await downscale(frame) : null;
         const list = nodes.map((node, i) => `${i}: "${node.label}"${node.input ? ' (input)' : ''} at ${Math.round(node.x / SCALE)},${Math.round(node.y / SCALE)}`).join('\n');
         const text = `Task: ${task}\n${source === 'schedule' ? 'This is a scheduled run: do the task once now.\n' : ''}Step ${step} of ${MAX_STEPS}.\nInstalled apps: ${apps || 'unknown'}\nDone so far:\n${recentLog(log) || '(nothing yet)'}\nVisible elements:\n${list || '(none found; use the screenshot)'}\nWrite "say" and any answer in ${lang}.`;
-        const reply = await ai.decide({ system: SYSTEM, history: [], image, text });
+        const reply = await decideWithRetry(ai, { system: SYSTEM, history: [], image, text }, job);
         spent.steps++;
         const u = reply.usage || {};
         spent.input += u.prompt_tokens ?? u.promptTokenCount ?? 0;

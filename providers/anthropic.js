@@ -14,10 +14,10 @@ module.exports = function anthropic({ apiKey, model }) {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model, system, messages, max_tokens: 1024, temperature: 0.2 }),
-        signal: AbortSignal.timeout(45000),
+        signal: AbortSignal.timeout(90000),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw Object.assign(new Error(data.error?.message || `Anthropic ${response.status}`), { code: 'ai_failed' });
+      if (!response.ok) throw Object.assign(new Error(data.error?.message || `Anthropic ${response.status}`), { code: 'ai_failed', status: response.status });
       const usage = data.usage ? { prompt_tokens: data.usage.input_tokens, completion_tokens: data.usage.output_tokens } : undefined;
       return { text: (data.content || []).map(c => c.text || '').join(''), usage };
     },

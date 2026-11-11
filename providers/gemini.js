@@ -15,10 +15,10 @@ module.exports = function gemini({ apiKey, model, reasoning }) {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents, generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 4096, ...(BUDGET[reasoning] && /2\.5/.test(model) ? { thinkingConfig: { thinkingBudget: BUDGET[reasoning] } } : {}) } }),
-        signal: AbortSignal.timeout(45000),
+        signal: AbortSignal.timeout(90000),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw Object.assign(new Error(data.error?.message || `Gemini ${response.status}`), { code: 'ai_failed' });
+      if (!response.ok) throw Object.assign(new Error(data.error?.message || `Gemini ${response.status}`), { code: 'ai_failed', status: response.status });
       const out = data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
       return { text: out, usage: data.usageMetadata };
     },
