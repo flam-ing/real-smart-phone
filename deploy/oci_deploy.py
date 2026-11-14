@@ -33,7 +33,10 @@ def run(script, timeout=600):
     deadline = time.time() + timeout + 60
     while time.time() < deadline:
         time.sleep(5)
-        e = client.get_instance_agent_command_execution(cmd.id, INSTANCE).data
+        try:
+            e = client.get_instance_agent_command_execution(cmd.id, INSTANCE).data
+        except (oci.exceptions.RequestException, oci.exceptions.ConnectTimeout):
+            continue  # a dropped poll; the command keeps running on the server
         if e.lifecycle_state in ("SUCCEEDED", "FAILED", "TIMED_OUT", "CANCELED"):
             print(e.content.text or "", end="")
             print(f"[{e.lifecycle_state}, exit {e.content.exit_code}]")
